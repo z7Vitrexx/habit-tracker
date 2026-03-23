@@ -64,37 +64,7 @@ export function Dashboard() {
     setTodayCheckIns(checkInMap)
   }, [profileData, getTodayCheckIns])
 
-  // Quick check-in handler (currently unused, kept for future implementation)
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const handleQuickCheckIn = async (habit: Habit, status: CheckInStatus) => {
-    const currentStatus = getCheckInStatus(habit.id)
-    
-    // If clicking the same status, undo/remove it
-    if (currentStatus === status) {
-      await handleUndoCheckIn(habit.id)
-      return
-    }
-    
-    // Handle quantitative habits with 'done' status
-    if (habit.type === 'quantitative' && status === 'done') {
-      setQuantitativeDialog(habit)
-      return
-    }
-
-    // For all other cases, create/update the check-in
-    const success = await createCheckIn(habit.id, status)
-    
-    if (success) {
-      // Refresh check-ins
-      const checkIns = getTodayCheckIns()
-      const checkInMap: Record<string, any> = {}
-      checkIns.forEach(ci => {
-        checkInMap[ci.habitId] = ci
-      })
-      setTodayCheckIns(checkInMap)
-    }
-  }
-
+  
   const handleQuantitativeCheckIn = async (habit: Habit) => {
     const value = parseFloat(quantitativeValue)
     if (isNaN(value) || value <= 0) return
@@ -172,13 +142,7 @@ const handleQuickCheckIn = async (habit: Habit, status: CheckInStatus) => {
     return checkIn?.status || 'not_scheduled'
   }
 
-  // Get check-in value (currently unused, kept for future implementation)
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const getCheckInValue = (habitId: string): number | undefined => {
-    const checkIn = todayCheckIns[habitId]
-    return checkIn?.value
-  }
-
+  
   const getCheckInNote = (habitId: string): string | undefined => {
     const checkIn = todayCheckIns[habitId]
     return checkIn?.note
