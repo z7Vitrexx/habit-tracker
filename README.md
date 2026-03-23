@@ -434,7 +434,7 @@ Bei PWA-Problemen:
 **2. Build-Einstellungen (automatisch erkannt)**
 - **Build Command:** `npm run build`
 - **Output Directory:** `dist`
-- **Install Command:** `npm install --legacy-peer-deps`
+- **Install Command:** `npm install --legacy-peer-deps` (wichtig für Vercel!)
 
 **3. Deployen**
 - "Deploy" klicken
@@ -476,11 +476,14 @@ Bei PWA-Problemen:
 
 ### 🆘 Bei Problemen
 
-**Build-Fehler:**
+**Build-Fehler auf Vercel:**
 ```bash
+# Lokal testen
 npm install --legacy-peer-deps
 npm run build
 ```
+
+**⚠️ Wichtig:** `--legacy-peer-deps` ist für Vercel notwendig, da es noch die alte package.json mit vite@8.0.1 verwendet. Die lokalen Änderungen wurden noch nicht synchronisiert.
 
 **PWA-Probleme:**
 - Browser-Cache leeren
