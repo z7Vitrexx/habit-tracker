@@ -18,12 +18,15 @@ export function Settings() {
   const { permission, isSupported, requestPermission, showNotification } = useReminderContext()
   const { isInstallable, isInstalled, isInstalling, install, hasDeferredPrompt } = usePWAInstall()
 
-  console.log('Settings - PWA Install Status:', { isInstallable, isInstalled, isInstalling, hasDeferredPrompt })
   const [isExporting, setIsExporting] = useState<boolean>(false)
+  const [exportSuccess, setExportSuccess] = useState(false)
   const [isImporting, setIsImporting] = useState<boolean>(false)
   const [isDeleting, setIsDeleting] = useState<boolean>(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [importDialogOpen, setImportDialogOpen] = useState(false)
+  const [importFileData, setImportFileData] = useState<{ data: any; profileName: string; exportDate: string } | null>(null)
   const [importError, setImportError] = useState<string>('')
+  const [importSuccess, setImportSuccess] = useState(false)
   const [isRequestingPermission, setIsRequestingPermission] = useState(false)
   const [testNotificationSent, setTestNotificationSent] = useState(false)
   const [autoLockMinutes, setAutoLockMinutes] = useState(profileData?.settings.autoLockMinutes || 30)
@@ -88,6 +91,7 @@ export function Settings() {
 
     try {
       setIsExporting(true)
+      setExportSuccess(false)
       
       const exportData = {
         version: '1.0',
@@ -108,21 +112,25 @@ export function Settings() {
       a.click()
       document.body.removeChild(a)
       URL.revokeObjectURL(url)
+
+      setExportSuccess(true)
+      setTimeout(() => setExportSuccess(false), 6000)
     } catch (error) {
       console.error('Export failed:', error)
-      alert('Export fehlgeschlagen')
+      alert('Der Export konnte nicht erstellt werden. Bitte versuche es erneut.')
     } finally {
       setIsExporting(false)
     }
   }
 
-  const handleImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  // Step 1: Validate file and show confirmation dialog
+  const handleImportFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
 
     try {
-      setIsImporting(true)
       setImportError('')
+      setImportSuccess(false)
       const text = await file.text()
       const rawData = JSON.parse(text)
 
@@ -130,54 +138,60 @@ export function Settings() {
       const parseResult = ExportDataSchema.safeParse(rawData)
       
       if (!parseResult.success) {
-        const errorMessages = parseResult.error.issues.map(issue => 
-          `${issue.path.join('.')}: ${issue.message}`
-        ).join('\n')
-        throw new Error(`Ungültiges Dateiformat:\n${errorMessages}`)
+        throw new Error('Die ausgewählte Datei ist keine gültige Backup-Datei. Bitte wähle eine Datei, die zuvor mit dieser App exportiert wurde.')
       }
 
       const importData = parseResult.data
 
       // Version-Kompatibilitätsprüfung
       if (importData.version !== '1.0') {
-        throw new Error(`Inkompatible Version: ${importData.version}. Erwartet wird Version 1.0`)
+        throw new Error('Diese Backup-Datei stammt aus einer anderen Version und ist nicht kompatibel.')
       }
 
       // Profil-Validierung
       if (!importData.profile.name || !importData.profile.createdAt) {
-        throw new Error('Ungültige Profilinformationen in der Export-Datei')
+        throw new Error('Die Backup-Datei enthält keine gültigen Profilinformationen.')
       }
 
-      // Sicherheitsabfrage mit Details
-      const confirmMessage = `⚠️ Import überschreibt alle aktuellen Daten dieses Profils.
+      // File is valid – store data and show confirmation dialog
+      setImportFileData({
+        data: importData,
+        profileName: importData.profile.name,
+        exportDate: new Date(importData.exportedAt).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })
+      })
+      setImportDialogOpen(true)
+    } catch (error) {
+      console.error('Import validation failed:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Die Datei konnte nicht gelesen werden.'
+      setImportError(errorMessage)
+    } finally {
+      event.target.value = ''
+    }
+  }
 
-Profil: ${currentProfile?.name}
-Exportiert von: ${importData.profile.name}
-Exportiert am: ${new Date(importData.exportedAt).toLocaleDateString('de-DE')}
+  // Step 2: User confirmed import – apply data
+  const handleImportConfirm = async () => {
+    if (!importFileData) return
 
-Diese Aktion kann nicht rückgängig gemacht werden.
-
-Möchtest du wirklich fortfahren?`
-
-      if (!confirm(confirmMessage)) {
-        return
-      }
-
-      const success = await saveProfileData(importData.data)
+    try {
+      setIsImporting(true)
+      const success = await saveProfileData(importFileData.data.data)
       if (success) {
-        alert('✅ Import erfolgreich! Die Seite wird neu geladen.')
-        window.location.reload()
+        setImportSuccess(true)
+        setImportDialogOpen(false)
+        setImportFileData(null)
+        // Short delay so user sees the success message
+        setTimeout(() => window.location.reload(), 1500)
       } else {
         throw new Error('Speichern fehlgeschlagen')
       }
     } catch (error) {
       console.error('Import failed:', error)
-      const errorMessage = error instanceof Error ? error.message : 'Unbekannter Fehler'
-      setImportError(errorMessage)
-      alert(`❌ Import fehlgeschlagen:\n${errorMessage}`)
+      setImportError('Der Import konnte nicht gespeichert werden. Bitte versuche es erneut.')
+      setImportDialogOpen(false)
+      setImportFileData(null)
     } finally {
       setIsImporting(false)
-      event.target.value = ''
     }
   }
 
@@ -279,90 +293,165 @@ Möchtest du wirklich fortfahren?`
 
   return (
     <div className="space-y-6">
-      {/* Datenverwaltung */}
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">Einstellungen</h1>
+        <p className="text-muted-foreground">Passe die App an deine Bedürfnisse an</p>
+      </div>
+
+      {/* Lokale Speicherung Info */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex items-start space-x-3">
+            <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center shrink-0 mt-0.5">
+              <Shield className="w-5 h-5 text-green-600" />
+            </div>
+            <div className="space-y-1">
+              <h3 className="font-medium">Deine Daten bleiben auf diesem Gerät</h3>
+              <p className="text-sm text-muted-foreground">
+                Alle Gewohnheiten, Check-ins und Einstellungen werden ausschließlich lokal in deinem Browser gespeichert. 
+                Es gibt keinen Cloud-Sync – deine Daten verlassen niemals dein Gerät.
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Damit du bei einem Gerätewechsel oder Browser-Reset nichts verlierst, empfehlen wir dir, regelmäßig ein Backup zu erstellen.
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Backup erstellen (Export) */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
-            <Shield className="w-5 h-5" />
-            <span>Datenverwaltung</span>
+            <Download className="w-5 h-5" />
+            <span>Backup erstellen</span>
           </CardTitle>
           <CardDescription>
-            Exportiere, importiere und verwalte deine profilspezifischen Daten
+            Sichere alle Daten dieses Profils als Datei auf deinem Gerät
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid gap-4">
-            <div className="flex items-center justify-between p-4 border rounded-lg">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <Download className="w-5 h-5 text-blue-600" />
-                </div>
-                <div>
-                  <h3 className="font-medium">Daten exportieren</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Exportiere alle Daten dieses Profils als JSON-Datei
-                  </p>
-                </div>
-              </div>
-              <Button
-                onClick={handleExport}
-                disabled={isExporting}
-                className="flex items-center space-x-2"
-              >
-                <Download className="w-4 h-4" />
-                <span>{isExporting ? 'Exportiere...' : 'Exportieren'}</span>
-              </Button>
-            </div>
-
-            <div className="flex items-center justify-between p-4 border rounded-lg">
-              <div>
-                <h3 className="font-medium">Daten importieren</h3>
-                <p className="text-sm text-muted-foreground">
-                  Importiere eine zuvor exportierte JSON-Datei
-                </p>
-                {importError && (
-                  <p className="text-sm text-red-600 mt-1">{importError}</p>
-                )}
-              </div>
-              <div className="flex items-center space-x-2">
-                <Input
-                  type="file"
-                  accept=".json"
-                  onChange={handleImport}
-                  disabled={isImporting}
-                  className="hidden"
-                  id="import-file"
-                />
-                <Button
-                  onClick={() => document.getElementById('import-file')?.click()}
-                  disabled={isImporting}
-                  variant="outline"
-                  className="flex items-center space-x-2"
-                >
-                  <Upload className="w-4 h-4" />
-                  <span>{isImporting ? 'Importiere...' : 'Importieren'}</span>
-                </Button>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between p-4 border rounded-lg border-red-200">
-              <div>
-                <h3 className="font-medium text-red-600">Alle Daten löschen</h3>
-                <p className="text-sm text-muted-foreground">
-                  Lösche alle Gewohnheiten, Check-ins und Einstellungen dieses Profils
-                </p>
-              </div>
-              <Button
-                onClick={() => setDeleteDialogOpen(true)}
-                disabled={isDeleting}
-                variant="destructive"
-                className="flex items-center space-x-2"
-              >
-                <Trash2 className="w-4 h-4" />
-                <span>{isDeleting ? 'Lösche...' : 'Löschen'}</span>
-              </Button>
-            </div>
+          <div className="text-sm text-muted-foreground space-y-1">
+            <p>Das Backup enthält:</p>
+            <ul className="list-disc ml-5 space-y-0.5">
+              <li>Alle Gewohnheiten und deren Einstellungen</li>
+              <li>Alle bisherigen Check-ins und Notizen</li>
+              <li>Deine App-Einstellungen und Erinnerungen</li>
+            </ul>
           </div>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+            <Button
+              onClick={handleExport}
+              disabled={isExporting}
+              className="w-full sm:w-auto flex items-center justify-center space-x-2"
+            >
+              <Download className="w-4 h-4" />
+              <span>{isExporting ? 'Wird erstellt...' : 'Backup herunterladen'}</span>
+            </Button>
+          </div>
+          {exportSuccess && (
+            <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+              <p className="text-sm text-green-800 font-medium">
+                Backup wurde erfolgreich erstellt und heruntergeladen.
+              </p>
+              <p className="text-xs text-green-700 mt-1">
+                Bewahre die Datei sicher auf, z.B. in einem Cloud-Ordner oder auf einem USB-Stick.
+              </p>
+            </div>
+          )}
+          <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-sm text-blue-800">
+              <strong>Tipp:</strong> Erstelle regelmäßig ein Backup – z.B. einmal pro Woche. So bist du auf der sicheren Seite.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Backup wiederherstellen (Import) */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <Upload className="w-5 h-5" />
+            <span>Backup wiederherstellen</span>
+          </CardTitle>
+          <CardDescription>
+            Stelle ein zuvor erstelltes Backup wieder her
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+            <p className="text-sm text-amber-800">
+              <strong>Wichtig:</strong> Beim Wiederherstellen werden alle aktuellen Daten dieses Profils durch die Daten aus der Backup-Datei ersetzt. 
+              Erstelle vorher ein Backup, wenn du deine aktuellen Daten behalten möchtest.
+            </p>
+          </div>
+          <div className="text-sm text-muted-foreground">
+            Es werden nur gültige Backup-Dateien akzeptiert, die mit dieser App erstellt wurden.
+          </div>
+          {importError && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-sm text-red-800">{importError}</p>
+            </div>
+          )}
+          {importSuccess && (
+            <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+              <p className="text-sm text-green-800 font-medium">
+                Backup wurde erfolgreich wiederhergestellt. Die Seite wird neu geladen…
+              </p>
+            </div>
+          )}
+          <div>
+            <Input
+              type="file"
+              accept=".json"
+              onChange={handleImportFileSelect}
+              disabled={isImporting}
+              className="hidden"
+              id="import-file"
+            />
+            <Button
+              onClick={() => { setImportError(''); document.getElementById('import-file')?.click() }}
+              disabled={isImporting}
+              variant="outline"
+              className="w-full sm:w-auto flex items-center justify-center space-x-2"
+            >
+              <Upload className="w-4 h-4" />
+              <span>{isImporting ? 'Wird wiederhergestellt...' : 'Backup-Datei auswählen'}</span>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Daten löschen */}
+      <Card className="border-red-100">
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2 text-red-600">
+            <Trash2 className="w-5 h-5" />
+            <span>Profildaten löschen</span>
+          </CardTitle>
+          <CardDescription>
+            Lösche alle Daten dieses Profils unwiderruflich
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Damit werden alle Gewohnheiten, Check-ins, Einstellungen und Erinnerungen dieses Profils endgültig gelöscht. 
+            Dein Profil selbst bleibt erhalten, ist danach aber leer.
+          </p>
+          <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-sm text-red-800">
+              <strong>Empfehlung:</strong> Erstelle vorher ein Backup, falls du deine Daten später noch brauchst.
+            </p>
+          </div>
+          <Button
+            onClick={() => setDeleteDialogOpen(true)}
+            disabled={isDeleting}
+            variant="outline"
+            className="w-full sm:w-auto flex items-center justify-center space-x-2 border-red-300 text-red-600 hover:bg-red-50 hover:text-red-700"
+          >
+            <Trash2 className="w-4 h-4" />
+            <span>Alle Profildaten löschen…</span>
+          </Button>
         </CardContent>
       </Card>
 
@@ -379,7 +468,7 @@ Möchtest du wirklich fortfahren?`
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="grid gap-4">
-            <div className="flex items-center justify-between">
+            <div className="space-y-2">
               <div>
                 <h3 className="font-medium">Automatische Sperre</h3>
                 <p className="text-sm text-muted-foreground">
@@ -395,7 +484,7 @@ Möchtest du wirklich fortfahren?`
                   onChange={(e) => setAutoLockMinutes(Number(e.target.value))}
                   className="w-20"
                 />
-                <span className="text-sm text-muted-foreground">Minuten</span>
+                <span className="text-sm text-muted-foreground">Min.</span>
                 <Button
                   onClick={() => handleSettingsUpdate({ autoLockMinutes })}
                   variant="outline"
@@ -406,23 +495,21 @@ Möchtest du wirklich fortfahren?`
               </div>
             </div>
 
-            <div className="flex items-center justify-between">
+            <div className="space-y-2">
               <div>
                 <h3 className="font-medium">Wochenbeginn</h3>
                 <p className="text-sm text-muted-foreground">
                   Wann die Woche in der Kalenderansicht beginnt
                 </p>
               </div>
-              <div className="flex items-center space-x-2">
-                <select
-                  value={weekStart}
-                  onChange={(e) => handleSettingsUpdate({ weekStart: e.target.value as 'monday' | 'sunday' })}
-                  className="px-3 py-1 border rounded text-sm"
-                >
-                  <option value="monday">Montag</option>
-                  <option value="sunday">Sonntag</option>
-                </select>
-              </div>
+              <select
+                value={weekStart}
+                onChange={(e) => handleSettingsUpdate({ weekStart: e.target.value as 'monday' | 'sunday' })}
+                className="w-full sm:w-auto px-3 py-2 border rounded text-sm bg-background"
+              >
+                <option value="monday">Montag</option>
+                <option value="sunday">Sonntag</option>
+              </select>
             </div>
 
             <div className="flex items-center justify-between">
@@ -577,7 +664,7 @@ Möchtest du wirklich fortfahren?`
               </div>
               <h3 className="text-lg font-semibold mb-2">Keine aktiven Erinnerungen</h3>
               <p className="text-muted-foreground">
-                Du hast noch keine Erinnerungen für deine Gewohnheiten eingerichtet.
+                Du kannst Erinnerungen beim Erstellen oder Bearbeiten eines Habits unter „Gewohnheiten" aktivieren.
               </p>
             </div>
           ) : (
@@ -734,122 +821,50 @@ Möchtest du wirklich fortfahren?`
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
-            <Cog className="w-5 h-5" />
+            <Shield className="w-5 h-5" />
             <span>Über diese App</span>
           </CardTitle>
           <CardDescription>
-            Informationen und technische Details zu Habit Tracker Pro
+            Datenschutz, Sicherheit und technische Hinweise
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="space-y-4">
             <div>
-              <h4 className="font-medium mb-3 flex items-center space-x-2">
-                <span className="text-lg">🔒</span>
-                <span>Datenschutz & Sicherheit</span>
-              </h4>
-              <ul className="text-sm text-muted-foreground space-y-2 ml-6">
-                <li className="flex items-start">
-                  <span className="text-primary mr-2">•</span>
-                  <span><strong>100% lokal:</strong> Deine Daten verlassen niemals dein Gerät</span>
-                </li>
-                <li className="flex items-start">
-                  <span className="text-primary mr-2">•</span>
-                  <span><strong>Verschlüsselt:</strong> Militärischer AES-256 Passwortschutz</span>
-                </li>
-                <li className="flex items-start">
-                  <span className="text-primary mr-2">•</span>
-                  <span><strong>Kein Cloud-Sync:</strong> Alles läuft nur in deinem Browser</span>
-                </li>
-                <li className="flex items-start">
-                  <span className="text-primary mr-2">•</span>
-                  <span><strong>Keine Tracker:</strong> Die App sammelt keine Nutzerdaten</span>
-                </li>
+              <h4 className="font-medium mb-2">Datenschutz & Sicherheit</h4>
+              <ul className="text-sm text-muted-foreground space-y-1.5 ml-4">
+                <li>• <strong>Lokal gespeichert:</strong> Alle Daten bleiben auf deinem Gerät</li>
+                <li>• <strong>Verschlüsselt:</strong> Profildaten sind mit AES-256 geschützt</li>
+                <li>• <strong>Kein Cloud-Sync:</strong> Keine Daten werden an Server gesendet</li>
+                <li>• <strong>Kein Tracking:</strong> Die App sammelt keine Nutzungsdaten</li>
               </ul>
             </div>
             
             <div>
-              <h4 className="font-medium mb-3 flex items-center space-x-2">
-                <span className="text-lg">🔔</span>
-                <span>Erinnerungen - Technische Grenzen</span>
-              </h4>
-              <ul className="text-sm text-muted-foreground space-y-2 ml-6">
-                <li className="flex items-start">
-                  <span className="text-primary mr-2">•</span>
-                  <span><strong>Nur im aktiven Browser:</strong> Funktioniert nur wenn Browser läuft</span>
-                </li>
-                <li className="flex items-start">
-                  <span className="text-primary mr-2">•</span>
-                  <span><strong>Keine systemweiten Erinnerungen:</strong> Wie native Apps</span>
-                </li>
-                <li className="flex items-start">
-                  <span className="text-primary mr-2">•</span>
-                  <span><strong>Browser-spezifisch:</strong> Gebunden an deinen Browser</span>
-                </li>
-                <li className="flex items-start">
-                  <span className="text-primary mr-2">•</span>
-                  <span><strong>Keine Garantie:</strong> Betriebssystem kann blockieren</span>
-                </li>
+              <h4 className="font-medium mb-2">Erinnerungen – Hinweise</h4>
+              <ul className="text-sm text-muted-foreground space-y-1.5 ml-4">
+                <li>• Erinnerungen funktionieren nur, solange die App im Browser geöffnet ist</li>
+                <li>• Keine systemweiten Push-Benachrichtigungen wie bei nativen Apps</li>
+                <li>• Die Zuverlässigkeit hängt von Browser und Betriebssystem ab</li>
               </ul>
             </div>
             
             <div>
-              <h4 className="font-medium mb-3 flex items-center space-x-2">
-                <span className="text-lg">📤</span>
-                <span>Daten-Sicherung</span>
-              </h4>
-              <ul className="text-sm text-muted-foreground space-y-2 ml-6">
-                <li className="flex items-start">
-                  <span className="text-primary mr-2">•</span>
-                  <span><strong>Regelmäßig exportieren:</strong> Sichere deine Fortschritte</span>
-                </li>
-                <li className="flex items-start">
-                  <span className="text-primary mr-2">•</span>
-                  <span><strong>Gerätewechsel:</strong> Manuellexport/import notwendig</span>
-                </li>
-                <li className="flex items-start">
-                  <span className="text-primary mr-2">•</span>
-                  <span><strong>JSON-Format:</strong> Menschlich lesbares Backup</span>
-                </li>
-                <li className="flex items-start">
-                  <span className="text-primary mr-2">•</span>
-                  <span><strong>Version 1.0:</strong> Kompatibel für zukünftige Updates</span>
-                </li>
-              </ul>
-            </div>
-            
-            <div>
-              <h4 className="font-medium mb-3 flex items-center space-x-2">
-                <span className="text-lg">🛠️</span>
-                <span>Technologie</span>
-              </h4>
-              <ul className="text-sm text-muted-foreground space-y-2 ml-6">
-                <li className="flex items-start">
-                  <span className="text-primary mr-2">•</span>
-                  <span><strong>React 19 + TypeScript:</strong> Moderne Web-Technologie</span>
-                </li>
-                <li className="flex items-start">
-                  <span className="text-primary mr-2">•</span>
-                  <span><strong>PWA:</strong> Installierbar wie eine native App</span>
-                </li>
-                <li className="flex items-start">
-                  <span className="text-primary mr-2">•</span>
-                  <span><strong>IndexedDB:</strong> Lokale Datenspeicherung</span>
-                </li>
-                <li className="flex items-start">
-                  <span className="text-primary mr-2">•</span>
-                  <span><strong>Web Crypto API:</strong> Sichere clientseitige Verschlüsselung</span>
-                </li>
+              <h4 className="font-medium mb-2">Backup & Gerätewechsel</h4>
+              <ul className="text-sm text-muted-foreground space-y-1.5 ml-4">
+                <li>• Erstelle regelmäßig ein Backup über „Backup erstellen" weiter oben</li>
+                <li>• Für einen Gerätewechsel: exportiere auf dem alten Gerät, importiere auf dem neuen</li>
+                <li>• Backups sind als JSON-Datei gespeichert und mit zukünftigen Versionen kompatibel</li>
               </ul>
             </div>
             
             <div className="pt-4 border-t">
               <div className="bg-muted/50 rounded-lg p-4">
                 <p className="text-sm font-medium text-center">
-                  <strong>Habit Tracker Pro v1.0</strong>
+                  Habit Tracker Pro v1.1
                 </p>
                 <p className="text-xs text-muted-foreground text-center mt-1">
-                  Eine private, sichere und funktionale Habit-Tracking App ohne Kompromisse beim Datenschutz.
+                  Privat, sicher und funktional – ohne Kompromisse beim Datenschutz.
                 </p>
               </div>
             </div>
@@ -888,46 +903,102 @@ Möchtest du wirklich fortfahren?`
         </CardContent>
       </Card>
 
+      {/* Import Confirmation Dialog */}
+      <Dialog open={importDialogOpen} onOpenChange={(open) => { if (!open) { setImportDialogOpen(false); setImportFileData(null) } }}>
+        <DialogContent className="max-w-md bg-white">
+          <DialogHeader>
+            <DialogTitle className="flex items-center space-x-2">
+              <AlertTriangle className="w-5 h-5 text-amber-500" />
+              <span>Backup wiederherstellen?</span>
+            </DialogTitle>
+            <DialogDescription>
+              Beim Wiederherstellen werden alle aktuellen Daten dieses Profils ersetzt.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            {importFileData && (
+              <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg space-y-2">
+                <p className="text-sm text-amber-900">
+                  <strong>Aktuelles Profil:</strong> {currentProfile.name}
+                </p>
+                <p className="text-sm text-amber-800">
+                  <strong>Backup von:</strong> {importFileData.profileName}
+                </p>
+                <p className="text-sm text-amber-800">
+                  <strong>Erstellt am:</strong> {importFileData.exportDate}
+                </p>
+              </div>
+            )}
+            <div className="p-3 bg-muted/50 border rounded-lg">
+              <p className="text-sm text-muted-foreground">
+                Alle deine aktuellen Gewohnheiten, Check-ins und Einstellungen werden durch die Daten aus dem Backup ersetzt. 
+                Diese Aktion kann nicht rückgängig gemacht werden.
+              </p>
+            </div>
+            <div className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3">
+              <Button
+                onClick={() => { setImportDialogOpen(false); setImportFileData(null) }}
+                variant="outline"
+                className="flex-1"
+              >
+                Abbrechen
+              </Button>
+              <Button
+                onClick={handleImportConfirm}
+                disabled={isImporting}
+                className="flex-1"
+              >
+                {isImporting ? 'Wird wiederhergestellt...' : 'Ja, Backup wiederherstellen'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent className="max-w-md bg-white">
           <DialogHeader>
             <DialogTitle className="flex items-center space-x-2 text-red-600">
               <AlertTriangle className="w-5 h-5" />
-              <span>Alle Daten löschen?</span>
+              <span>Wirklich alle Daten löschen?</span>
             </DialogTitle>
             <DialogDescription>
-              Diese Aktion löscht alle Gewohnheiten, Check-ins und Einstellungen dieses Profils unwiderruflich.
-              Dies kann nicht rückgängig gemacht werden.
+              Diese Aktion kann nicht rückgängig gemacht werden.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-sm text-red-800 font-medium">
-                Profil: {currentProfile.name}
+              <p className="text-sm text-red-800 font-medium mb-2">
+                Profil „{currentProfile.name}" – folgende Daten werden gelöscht:
               </p>
-              <p className="text-sm text-red-600 mt-1">
-                • Alle Gewohnheiten werden gelöscht<br/>
-                • Alle Check-ins werden gelöscht<br/>
-                • Alle Einstellungen werden zurückgesetzt<br/>
-                • Diese Aktion kann nicht rückgängig gemacht werden
+              <ul className="text-sm text-red-700 space-y-1">
+                <li>• Alle Gewohnheiten und deren Einstellungen</li>
+                <li>• Alle bisherigen Check-ins und Notizen</li>
+                <li>• Alle Erinnerungen</li>
+                <li>• Alle App-Einstellungen dieses Profils</li>
+              </ul>
+            </div>
+            <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+              <p className="text-sm text-amber-800">
+                <strong>Tipp:</strong> Erstelle zuerst ein Backup, wenn du deine Daten eventuell noch brauchst.
               </p>
             </div>
-            <div className="flex space-x-3">
-              <Button
-                onClick={handleDeleteAllData}
-                disabled={isDeleting}
-                variant="destructive"
-                className="flex-1"
-              >
-                {isDeleting ? 'Lösche...' : 'Ja, alle Daten löschen'}
-              </Button>
+            <div className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3">
               <Button
                 onClick={() => setDeleteDialogOpen(false)}
                 variant="outline"
                 className="flex-1"
               >
                 Abbrechen
+              </Button>
+              <Button
+                onClick={handleDeleteAllData}
+                disabled={isDeleting}
+                variant="destructive"
+                className="flex-1"
+              >
+                {isDeleting ? 'Wird gelöscht...' : 'Endgültig löschen'}
               </Button>
             </div>
           </div>

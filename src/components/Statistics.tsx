@@ -1,5 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
-import React from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
 import { Button } from './ui/button'
 import { TrendingUp, Calendar, Target, Zap, BarChart3 } from 'lucide-react'
@@ -207,7 +206,8 @@ export function Statistics() {
   const getWeeklyInsight = () => {
     if (!profileData || activeHabits.length === 0) return null
     
-    const currentWeek = getWeeklyData()[0] // Most recent week
+    const weeks = getWeeklyData()
+    const currentWeek = weeks[weeks.length - 1] // Most recent week (array is chronological)
     if (!currentWeek) return null
     
     const { completed, planned } = currentWeek
@@ -308,12 +308,17 @@ export function Statistics() {
         </div>
         
         <Card>
-          <CardContent className="text-center py-8">
-            <BarChart3 className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-            <h3 className="text-lg font-semibold mb-2">Keine aktiven Gewohnheiten</h3>
-            <p className="text-muted-foreground">
-              Erstelle zuerst Gewohnheiten, um Statistiken zu sehen.
+          <CardContent className="text-center py-12">
+            <div className="w-16 h-16 bg-muted rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <BarChart3 className="w-8 h-8 text-muted-foreground" />
+            </div>
+            <h3 className="text-lg font-semibold mb-2">Noch keine Statistiken</h3>
+            <p className="text-muted-foreground max-w-sm mx-auto mb-4">
+              Sobald du Habits angelegt und Check-ins gemacht hast, erscheinen hier deine Trends, Streaks und Fortschritte.
             </p>
+            <Button variant="outline" onClick={() => window.dispatchEvent(new CustomEvent('navigate', { detail: 'dashboard' }))}>
+              Zum Dashboard
+            </Button>
           </CardContent>
         </Card>
       </div>
@@ -351,19 +356,19 @@ export function Statistics() {
             <div className="grid grid-cols-3 gap-4 text-center">
               <div>
                 <div className="text-2xl font-bold text-green-600">
-                  {getWeeklyData()[0]?.completed || 0}
+                  {weeklyData[weeklyData.length - 1]?.completed || 0}
                 </div>
                 <div className="text-xs text-muted-foreground">Geschafft</div>
               </div>
               <div>
                 <div className="text-2xl font-bold text-blue-600">
-                  {getWeeklyData()[0]?.planned || 0}
+                  {weeklyData[weeklyData.length - 1]?.planned || 0}
                 </div>
                 <div className="text-xs text-muted-foreground">Geplant</div>
               </div>
               <div>
                 <div className="text-2xl font-bold text-orange-600">
-                  {getWeeklyData()[0]?.completionRate || 0}%
+                  {weeklyData[weeklyData.length - 1]?.completionRate || 0}%
                 </div>
                 <div className="text-xs text-muted-foreground">Quote</div>
               </div>
@@ -373,7 +378,7 @@ export function Statistics() {
       </Card>
 
       {/* Overview Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Aktive Gewohnheiten</CardTitle>
@@ -553,21 +558,21 @@ export function Statistics() {
               <div className="mb-6">
                 <h4 className="font-medium mb-4">Verlauf der letzten {timeRange} Tage</h4>
                 <ResponsiveContainer width="100%" height={200}>
-                  <LineChart data={trendData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="date" />
-                    <YAxis domain={[0, 1]} ticks={[0, 1]} tickFormatter={(value) => value === 1 ? '✓' : '✗'} />
-                    <Tooltip 
-                      formatter={(value: any) => value === 1 ? 'Erledigt' : 'Nicht erledigt'}
-                    />
-                    <Line 
-                      type="stepAfter" 
-                      dataKey="completed" 
-                      stroke="#22c55e" 
-                      strokeWidth={2}
-                      dot={{ fill: '#22c55e' }}
-                    />
-                  </LineChart>
+                    <LineChart data={trendData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="date" tick={{ fontSize: 10 }} interval="preserveStartEnd" />
+                      <YAxis domain={[0, 1]} ticks={[0, 1]} tickFormatter={(value) => value === 1 ? '✓' : '✗'} width={30} />
+                      <Tooltip 
+                        formatter={(value: any) => value === 1 ? 'Erledigt' : 'Nicht erledigt'}
+                      />
+                      <Line 
+                        type="stepAfter" 
+                        dataKey="completed" 
+                        stroke="#22c55e" 
+                        strokeWidth={2}
+                        dot={{ fill: '#22c55e' }}
+                      />
+                    </LineChart>
                 </ResponsiveContainer>
               </div>
             </CardContent>
@@ -586,21 +591,21 @@ export function Statistics() {
         <CardContent>
           <div className="mb-4">
             <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={weeklyData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="week" />
-                <YAxis />
-                <Tooltip 
-                  formatter={(value: any, name: any) => {
-                    if (name === 'completed') return [`${value} erledigt`, 'Erledigt']
-                    if (name === 'planned') return [`${value} geplant`, 'Geplant']
-                    return [value, String(name)]
-                  }}
-                  labelFormatter={(label) => `Woche ${label}`}
-                />
-                <Bar dataKey="completed" fill="#22c55e" name="completed" />
-                <Bar dataKey="planned" fill="#3b82f6" name="planned" />
-              </BarChart>
+                <BarChart data={weeklyData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="week" tick={{ fontSize: 10 }} />
+                  <YAxis width={35} tick={{ fontSize: 11 }} />
+                  <Tooltip 
+                    formatter={(value: any, name: any) => {
+                      if (name === 'completed') return [`${value} erledigt`, 'Erledigt']
+                      if (name === 'planned') return [`${value} geplant`, 'Geplant']
+                      return [value, String(name)]
+                    }}
+                    labelFormatter={(label) => `Woche ${label}`}
+                  />
+                  <Bar dataKey="completed" fill="#22c55e" name="completed" />
+                  <Bar dataKey="planned" fill="#3b82f6" name="planned" />
+                </BarChart>
             </ResponsiveContainer>
           </div>
           
@@ -686,7 +691,7 @@ export function Statistics() {
               </div>
             </div>
             
-            <div className="flex items-center justify-center space-x-6 mt-6 text-sm text-muted-foreground">
+            <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-6 mt-6 text-xs sm:text-sm text-muted-foreground">
               <div className="flex items-center space-x-2">
                 <div className="w-3 h-3 bg-muted/30 rounded-sm border-muted/50 border"></div>
                 <span>Kein Eintrag</span>

@@ -1,21 +1,46 @@
 import { useState, useEffect } from 'react'
 import { Button } from './ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
-import { Download, X, RefreshCw } from 'lucide-react'
+import { Download, X, RefreshCw, AlertTriangle } from 'lucide-react'
 
 export function PWAUpdatePrompt() {
   const [showUpdate, setShowUpdate] = useState(false)
   const [isUpdating, setIsUpdating] = useState(false)
+  const [errorMessage, setErrorMessage] = useState<string>('')
 
   useEffect(() => {
     const handleSWUpdate = () => {
       setShowUpdate(true)
+      setErrorMessage('')
+    }
+
+    // Handle dynamic import errors
+    const handleDynamicImportError = (event: Event) => {
+      const error = event as ErrorEvent
+      if (error.message && error.message.includes('Failed to fetch dynamically imported module')) {
+        console.error('[PWA] Dynamic import error detected:', error.message)
+        setShowUpdate(true)
+        setErrorMessage('Einige Seiten konnten nicht geladen werden. Bitte aktualisiere die App.')
+      }
+    }
+
+    // Handle unhandled promise rejections (dynamic import failures)
+    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      if (event.reason && event.reason.message && event.reason.message.includes('dynamically imported')) {
+        console.error('[PWA] Dynamic import rejection:', event.reason)
+        setShowUpdate(true)
+        setErrorMessage('Einige Seiten konnten nicht geladen werden. Bitte aktualisiere die App.')
+      }
     }
 
     window.addEventListener('sw-update', handleSWUpdate)
+    window.addEventListener('error', handleDynamicImportError)
+    window.addEventListener('unhandledrejection', handleUnhandledRejection)
 
     return () => {
       window.removeEventListener('sw-update', handleSWUpdate)
+      window.removeEventListener('error', handleDynamicImportError)
+      window.removeEventListener('unhandledrejection', handleUnhandledRejection)
     }
   }, [])
 
@@ -44,10 +69,13 @@ export function PWAUpdatePrompt() {
 
   return (
     <div className="fixed bottom-4 left-4 z-50 max-w-sm">
-      <Card className="shadow-lg border-green-200">
+      <Card className={`shadow-lg ${errorMessage ? 'border-yellow-200' : 'border-green-200'}`}>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-lg">Neue Version verfügbar</CardTitle>
+            <CardTitle className="text-lg flex items-center gap-2">
+              {errorMessage && <AlertTriangle className="w-5 h-5 text-yellow-500" />}
+              {errorMessage ? 'Update erforderlich' : 'Neue Version verfügbar'}
+            </CardTitle>
             <Button
               variant="ghost"
               size="sm"
@@ -58,7 +86,7 @@ export function PWAUpdatePrompt() {
             </Button>
           </div>
           <CardDescription>
-            Eine neue Version der Habit Tracker App ist verfügbar
+            {errorMessage || 'Eine neue Version der Habit Tracker App ist verfügbar'}
           </CardDescription>
         </CardHeader>
         <CardContent className="pt-0">

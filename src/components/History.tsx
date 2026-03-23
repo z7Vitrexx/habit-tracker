@@ -5,6 +5,7 @@ import { Input } from './ui/input'
 import { Textarea } from './ui/textarea'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog'
 import { CheckCircle2, Circle, X, SkipForward, Edit2, Trash2, Target } from 'lucide-react'
+import { getIcon } from '../lib/iconMapping'
 import { useAuth } from '../hooks/useAuth'
 import { useCheckIns } from '../hooks/useCheckIns'
 import type { Habit, CheckIn, CheckInStatus } from '../types'
@@ -176,6 +177,33 @@ export function History() {
     }
   }
 
+  if (activeHabits.length === 0) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-2xl font-bold">Verlauf</h2>
+          <p className="text-muted-foreground">
+            Analysiere deine Fortschritte und Einträge
+          </p>
+        </div>
+        <Card>
+          <CardContent className="text-center py-12">
+            <div className="w-16 h-16 bg-muted rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <Target className="w-8 h-8 text-muted-foreground" />
+            </div>
+            <h3 className="text-lg font-semibold mb-2">Noch kein Verlauf</h3>
+            <p className="text-muted-foreground max-w-sm mx-auto mb-4">
+              Hier siehst du später alle deine Check-ins – als Liste, Kalender oder Tagesansicht.
+            </p>
+            <Button variant="outline" onClick={() => window.dispatchEvent(new CustomEvent('navigate', { detail: 'dashboard' }))}>
+              Zum Dashboard
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -186,8 +214,8 @@ export function History() {
       </div>
 
       {/* View Mode Selection */}
-      <div className="flex items-center justify-between">
-        <div className="flex space-x-1">
+      <div className="space-y-3">
+        <div className="flex flex-wrap gap-1">
           <Button
             variant={viewMode === 'list' ? 'default' : 'outline'}
             size="sm"
@@ -213,14 +241,14 @@ export function History() {
 
         {/* Context-dependent Controls */}
         {viewMode === 'list' && (
-          <div className="flex items-center space-x-2 flex-wrap gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
             <select
               value={selectedHabit?.id || ''}
               onChange={(e) => {
                 const habit = activeHabits.find(h => h.id === e.target.value)
                 setSelectedHabit(habit || null)
               }}
-              className="px-3 py-1 border rounded text-sm"
+              className="w-full px-3 py-2 border rounded text-sm bg-background"
             >
               {activeHabits.map(habit => (
                 <option key={habit.id} value={habit.id}>{habit.name}</option>
@@ -230,7 +258,7 @@ export function History() {
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value as CheckInStatus | 'all' | 'hasNote' | 'missedOnly' | 'skippedOnly')}
-              className="px-3 py-1 border rounded text-sm"
+              className="w-full px-3 py-2 border rounded text-sm bg-background"
             >
               <option value="all">Alle Status</option>
               <option value="done">Erledigt</option>
@@ -244,7 +272,7 @@ export function History() {
             <select
               value={timeFilter}
               onChange={(e) => setTimeFilter(e.target.value as 'all' | '7days' | '30days' | '90days')}
-              className="px-3 py-1 border rounded text-sm"
+              className="w-full px-3 py-2 border rounded text-sm bg-background"
             >
               <option value="all">Alle Zeit</option>
               <option value="7days">Letzte 7 Tage</option>
@@ -255,14 +283,14 @@ export function History() {
         )}
 
         {viewMode === 'calendar' && selectedHabit && (
-          <div className="flex items-center space-x-2">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
             <select
               value={selectedHabit?.id || ''}
               onChange={(e) => {
                 const habit = activeHabits.find(h => h.id === e.target.value)
                 setSelectedHabit(habit || null)
               }}
-              className="px-3 py-1 border rounded text-sm"
+              className="w-full sm:w-auto px-3 py-2 border rounded text-sm bg-background"
             >
               {activeHabits.map(habit => (
                 <option key={habit.id} value={habit.id}>{habit.name}</option>
@@ -277,8 +305,8 @@ export function History() {
               >
                 ←
               </Button>
-              <span className="font-medium min-w-[120px] text-center">
-                {format(currentMonth, 'MMMM yyyy', { locale: de })}
+              <span className="font-medium min-w-[100px] text-center text-sm">
+                {format(currentMonth, 'MMM yyyy', { locale: de })}
               </span>
               <Button
                 variant="outline"
@@ -293,12 +321,12 @@ export function History() {
         )}
 
         {viewMode === 'date' && (
-          <div className="flex items-center space-x-2">
+          <div>
             <Input
               type="date"
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
-              className="px-3 py-1 border rounded text-sm"
+              className="w-full sm:w-auto px-3 py-2 border rounded text-sm"
             />
           </div>
         )}
@@ -538,11 +566,10 @@ export function History() {
                                 className="w-10 h-10 rounded-full border-2 border-white shadow-sm flex items-center justify-center"
                                 style={{ backgroundColor: habit.color }}
                               >
-                                {habit.icon ? (
-                                  <span className="text-white text-lg">{habit.icon}</span>
-                                ) : (
-                                  <Target className="w-5 h-5 text-white" />
-                                )}
+                                {(() => {
+                                  const IconComponent = getIcon(habit.icon)
+                                  return <IconComponent className="w-5 h-5 text-white" />
+                                })()}
                               </div>
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center space-x-2">

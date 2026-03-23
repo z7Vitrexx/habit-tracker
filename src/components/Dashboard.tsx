@@ -11,6 +11,7 @@ import { useCheckIns } from '../hooks/useCheckIns'
 import type { Habit, CheckInStatus } from '../types'
 import { format, startOfWeek, endOfWeek, eachDayOfInterval } from 'date-fns'
 import { de } from 'date-fns/locale'
+import { WelcomeScreen } from './WelcomeScreen'
 
 export function Dashboard() {
   const { profileData } = useAuth()
@@ -253,18 +254,38 @@ export function Dashboard() {
 
   const weeklyStats = getWeeklyStats()
 
+  // Show welcome screen if no habits exist at all
+  const hasAnyHabits = profileData && profileData.habits.length > 0
+
+  if (!hasAnyHabits) {
+    return (
+      <div className="space-y-8">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+          <p className="text-muted-foreground">
+            {format(new Date(), 'EEEE, d. MMMM yyyy', { locale: de })}
+          </p>
+        </div>
+        <WelcomeScreen onCreateCustom={() => {
+          // Navigate to habits page - dispatch via parent
+          window.dispatchEvent(new CustomEvent('navigate', { detail: 'habits' }))
+        }} />
+      </div>
+    )
+  }
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-5 sm:space-y-8">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Dashboard</h1>
         <p className="text-muted-foreground">
           {format(new Date(), 'EEEE, d. MMMM yyyy', { locale: de })}
         </p>
       </div>
 
       {/* Progress Overview */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Heute erledigt</CardTitle>
@@ -324,7 +345,7 @@ export function Dashboard() {
           <CardTitle className="text-lg">Diese Woche</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="grid grid-cols-3 gap-3 sm:gap-4">
             <div className="text-center">
               <div className="text-2xl font-bold text-green-600">{weeklyStats.completed}</div>
               <p className="text-sm text-muted-foreground">Erledigt</p>
@@ -358,9 +379,9 @@ export function Dashboard() {
                   <CheckCircle className="w-8 h-8 text-muted-foreground" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold mb-2">Heute keine geplanten Habits</h3>
+                  <h3 className="text-lg font-semibold mb-2">Heute keine Habits geplant</h3>
                   <p className="text-muted-foreground">
-                    Du hast heute keine aktiven Habits. Zeit für einen entspannten Tag!
+                    Für heute stehen keine Habits an. Genieß den freien Tag oder leg einen neuen Habit an.
                   </p>
                 </div>
               </div>
@@ -426,12 +447,13 @@ export function Dashboard() {
                     </div>
                     
                     {/* Primary Actions */}
-                    <div className="flex items-center space-x-2 mt-4">
+                    <div className="flex flex-wrap gap-2 mt-4">
                       <Button
                         size="sm"
                         variant={status === 'done' ? 'default' : 'outline'}
                         onClick={() => handleQuickCheckIn(habit, 'done')}
                         disabled={isProcessing}
+                        className="min-h-[36px] px-3"
                       >
                         Erledigt
                       </Button>
@@ -440,6 +462,7 @@ export function Dashboard() {
                         variant={status === 'missed' ? 'default' : 'outline'}
                         onClick={() => handleQuickCheckIn(habit, 'missed')}
                         disabled={isProcessing}
+                        className="min-h-[36px] px-3"
                       >
                         Verpasst
                       </Button>
@@ -448,6 +471,7 @@ export function Dashboard() {
                         variant={status === 'skipped' ? 'default' : 'outline'}
                         onClick={() => handleQuickCheckIn(habit, 'skipped')}
                         disabled={isProcessing}
+                        className="min-h-[36px] px-3"
                       >
                         Übersprungen
                       </Button>

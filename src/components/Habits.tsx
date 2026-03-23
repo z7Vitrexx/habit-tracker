@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Badge } from './ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from './ui/dialog'
 import { Plus, Edit2, Pause, Play, Archive, Trash2, Copy, Target, Calendar, Tag, Bell } from 'lucide-react'
+import { getIcon } from '../lib/iconMapping'
 import { useAuth } from '../hooks/useAuth'
 import { useReminderContext } from '../contexts/ReminderContext'
 import type { Habit, HabitStatus, FrequencyType } from '../types'
@@ -19,8 +20,35 @@ const avatarColors = [
 
 const habitIcons = [
   { name: 'Kein Icon', value: 'none' },
+  // Health & Fitness
   { name: 'Ziel', value: 'target' },
+  { name: 'Hantel', value: 'dumbbell' },
+  { name: 'Herz', value: 'heart' },
+  { name: 'Tropfen', value: 'droplets' },
+  { name: 'Flamme', value: 'flame' },
+  { name: 'Aktivität', value: 'activity' },
+  { name: 'Blitz', value: 'zap' },
+  // Daily Routine
+  { name: 'Mond', value: 'moon' },
+  { name: 'Sonne', value: 'sun' },
+  { name: 'Kaffee', value: 'coffee' },
+  { name: 'Besteck', value: 'utensils' },
+  { name: 'Apfel', value: 'apple' },
+  { name: 'Uhr', value: 'clock' },
+  // Work & Learning
+  { name: 'Gehirn', value: 'brain' },
+  { name: 'Buch', value: 'book' },
+  { name: 'Laptop', value: 'laptop' },
+  { name: 'Koffer', value: 'briefcase' },
+  // Emotions & More
+  { name: 'Lächeln', value: 'smile' },
+  { name: 'Stern', value: 'star' },
+  { name: 'Pokal', value: 'trophy' },
+  { name: 'Musik', value: 'music' },
   { name: 'Kalender', value: 'calendar' },
+  { name: 'Haus', value: 'home' },
+  { name: 'Blatt', value: 'leaf' },
+  { name: 'Flagge', value: 'flag' },
   { name: 'Tag', value: 'tag' },
 ]
 
@@ -319,7 +347,7 @@ export function Habits() {
               Neuer Habit
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl bg-white border shadow-2xl">
+          <DialogContent className="max-w-2xl bg-white border shadow-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Neuen Habit erstellen</DialogTitle>
               <DialogDescription>
@@ -349,15 +377,20 @@ export function Habits() {
                 <Plus className="w-8 h-8 text-muted-foreground" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold mb-2">Erste Gewohnheit erstellen</h3>
+                <h3 className="text-lg font-semibold mb-2">Noch keine Habits</h3>
                 <p className="text-muted-foreground mb-4">
-                  Beginne mit dem Tracking deiner ersten Gewohnheit
+                  Erstelle deinen ersten Habit oder wähle eine Vorlage auf dem Dashboard.
                 </p>
               </div>
-              <Button onClick={() => setIsCreating(true)}>
-                <Plus className="w-4 h-4 mr-2" />
-                Erste Gewohnheit erstellen
-              </Button>
+              <div className="flex flex-col sm:flex-row gap-2 justify-center">
+                <Button onClick={() => setIsCreating(true)}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Eigenen Habit erstellen
+                </Button>
+                <Button variant="outline" onClick={() => window.dispatchEvent(new CustomEvent('navigate', { detail: 'dashboard' }))}>
+                  Vorlagen ansehen
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -428,7 +461,7 @@ export function Habits() {
 
       {/* Edit Dialog */}
       <Dialog open={!!editingHabit} onOpenChange={(open) => !open && setEditingHabit(null)}>
-        <DialogContent className="max-w-2xl bg-white border shadow-2xl">
+        <DialogContent className="max-w-2xl bg-white border shadow-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Habit bearbeiten</DialogTitle>
             <DialogDescription>
@@ -486,11 +519,10 @@ function HabitCard({
               className="w-12 h-12 rounded-xl border-2 border-white shadow-md flex items-center justify-center flex-shrink-0"
               style={{ backgroundColor: habit.color }}
             >
-              {habit.icon ? (
-                <span className="text-white text-xl">{habit.icon}</span>
-              ) : (
-                <Target className="w-6 h-6 text-white" />
-              )}
+              {(() => {
+                const IconComponent = getIcon(habit.icon)
+                return <IconComponent className="w-6 h-6 text-white" />
+              })()}
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center space-x-3 mb-2">
@@ -553,55 +585,68 @@ function HabitCard({
               )}
             </div>
           </div>
-          <div className="flex items-center space-x-2 ml-4">
-            {habit.status === 'active' && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => onStatusChange('paused')}
-              >
-                <Pause className="w-4 h-4" />
-              </Button>
-            )}
-            {habit.status === 'paused' && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => onStatusChange('active')}
-              >
-                <Play className="w-4 h-4" />
-              </Button>
-            )}
+        </div>
+        {/* Actions - wrap on mobile */}
+        <div className="flex flex-wrap gap-2 mt-4 pt-3 border-t">
+          {habit.status === 'active' && (
             <Button
               variant="outline"
               size="sm"
-              onClick={onDuplicate}
+              onClick={() => onStatusChange('paused')}
+              title="Pausieren"
             >
-              <Copy className="w-4 h-4" />
+              <Pause className="w-4 h-4 sm:mr-1" />
+              <span className="hidden sm:inline text-xs">Pause</span>
             </Button>
+          )}
+          {habit.status === 'paused' && (
             <Button
               variant="outline"
               size="sm"
-              onClick={onEdit}
+              onClick={() => onStatusChange('active')}
+              title="Fortsetzen"
             >
-              <Edit2 className="w-4 h-4" />
+              <Play className="w-4 h-4 sm:mr-1" />
+              <span className="hidden sm:inline text-xs">Fortsetzen</span>
             </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onStatusChange('archived')}
-            >
-              <Archive className="w-4 h-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onDelete}
-              className="text-destructive hover:text-destructive"
-            >
-              <Trash2 className="w-4 h-4" />
-            </Button>
-          </div>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onEdit}
+            title="Bearbeiten"
+          >
+            <Edit2 className="w-4 h-4 sm:mr-1" />
+            <span className="hidden sm:inline text-xs">Bearbeiten</span>
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onDuplicate}
+            title="Duplizieren"
+          >
+            <Copy className="w-4 h-4 sm:mr-1" />
+            <span className="hidden sm:inline text-xs">Duplizieren</span>
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onStatusChange('archived')}
+            title="Archivieren"
+          >
+            <Archive className="w-4 h-4 sm:mr-1" />
+            <span className="hidden sm:inline text-xs">Archiv</span>
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onDelete}
+            className="text-destructive hover:text-destructive"
+            title="Löschen"
+          >
+            <Trash2 className="w-4 h-4 sm:mr-1" />
+            <span className="hidden sm:inline text-xs">Löschen</span>
+          </Button>
         </div>
       </CardContent>
     </Card>

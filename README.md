@@ -1,6 +1,6 @@
-# Habit Tracker Pro
+# Habit Tracker Pro v1.1
 
-Eine moderne, lokal laufende Habit-Tracker PWA mit Passwortschutz und Verschlüsselung.
+Eine moderne, lokal laufende Habit-Tracker PWA mit Passwortschutz, Verschlüsselung und verbesserter Mobile-UX.
 
 ## 🎯 Was ist Habit Tracker Pro?
 
@@ -9,11 +9,20 @@ Habit Tracker Pro ist eine **local-first** Web-App, die es ermöglicht, Gewohnhe
 ### 🌟 Warum diese App?
 
 - **🔐 100% Privat** - Deine Daten verlassen niemals dein Gerät
-- **� Echt verschlüsselt** - Militärischer Passwortschutz mit AES-256
+- **🔒 Echt verschlüsselt** - Starker Passwortschutz mit AES-256
 - **📱 Installierbar** - Funktioniert wie eine native App
 - **📊 Umfassend** - Streaks, Statistiken, Trends und Fortschritt
 - **📱 Offline-fähig** - Funktioniert ohne Internetverbindung
 - **🆓 Kostenlos** - Keine Abonnements, keine Datenverkäufe
+
+### ✨ Neu in v1.1
+
+- **📱 Mobile-UX verbessert** - Bessere Touch-Bedienung und responsive Layouts
+- **🎯 Onboarding mit Templates** - Schneller Einstieg mit vorgefertigten Gewohnheiten
+- **📊 Statistik-Verbesserungen** - Bessere Charts und mobile Ansichten
+- **📤 Vertrauenswürdige Daten-UX** - Klare Backup/Import-Dialoge und lokale Speicherung
+- **🔔 Ehrliche Reminder-UX** - Klare Hinweise zu technischen Browser-Grenzen
+- **⚡ Performance** - Lazy Loading und optimierte Komponenten
 
 ### ✨ Hauptfunktionen
 

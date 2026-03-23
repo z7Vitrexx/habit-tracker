@@ -1,4 +1,4 @@
-import { useState, Suspense, lazy } from 'react'
+import { useState, useEffect, Suspense, lazy } from 'react'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { ProfileSelection } from './components/ProfileSelection'
 import { AppLayout } from './components/AppLayout'
@@ -11,10 +11,23 @@ import { AuthProvider } from './contexts/AuthContext'
 import { ReminderProvider } from './contexts/ReminderContext'
 import { useAuth } from './hooks/useAuth'
 
-// Lazy load heavy components
-const Statistics = lazy(() => import('./components/Statistics'))
-const History = lazy(() => import('./components/History'))
-const Settings = lazy(() => import('./components/Settings'))
+// Lazy load heavy components with error handling
+const Statistics = lazy(() => 
+  import('./components/Statistics').catch(() => {
+    // Fallback to a simple error component
+    return import('./components/StatisticsError')
+  })
+)
+const History = lazy(() => 
+  import('./components/History').catch(() => {
+    return import('./components/HistoryError')
+  })
+)
+const Settings = lazy(() => 
+  import('./components/Settings').catch(() => {
+    return import('./components/SettingsError')
+  })
+)
 
 type ViewType = 'dashboard' | 'habits' | 'stats' | 'history' | 'settings'
 
@@ -22,6 +35,16 @@ function AppContent() {
   const auth = useAuth()
   const { isUnlocked } = auth
   const [currentView, setCurrentView] = useState<ViewType>('dashboard')
+
+  // Listen for navigation events from child components (e.g. WelcomeScreen)
+  useEffect(() => {
+    const handleNavigate = (e: Event) => {
+      const detail = (e as CustomEvent).detail as ViewType
+      if (detail) setCurrentView(detail)
+    }
+    window.addEventListener('navigate', handleNavigate)
+    return () => window.removeEventListener('navigate', handleNavigate)
+  }, [])
 
   if (!isUnlocked) {
     return <ProfileSelection />
