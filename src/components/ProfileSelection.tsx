@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
@@ -24,6 +24,17 @@ export function ProfileSelection() {
   const [showCreatePassword, setShowCreatePassword] = useState(false)
   const [showCreatePasswordConfirm, setShowCreatePasswordConfirm] = useState(false)
   const [localError, setLocalError] = useState<string | null>(null)
+
+  // Auto-unlock demo profile in demo mode
+  useEffect(() => {
+    if (import.meta.env.VITE_DEMO_MODE === 'true' && profiles.length > 0) {
+      const demoProfile = profiles.find(p => p.name === 'Demo')
+      if (demoProfile) {
+        console.log('Demo mode: Auto-unlocking demo profile')
+        unlockProfile(demoProfile, 'demo123')
+      }
+    }
+  }, [profiles, unlockProfile])
 
   const handleCreateProfile = async () => {
     if (!profileName.trim()) {

@@ -229,7 +229,7 @@ export function createDemoSeed(): DemoSeedData {
   }
 }
 
-export function shouldSeedDemo(): boolean {
+export async function shouldSeedDemo(): Promise<boolean> {
   // Check if demo mode is enabled
   const demoModeEnabled = import.meta.env.VITE_DEMO_MODE === 'true'
   console.log('Demo mode check:', { demoModeEnabled, envValue: import.meta.env.VITE_DEMO_MODE })
@@ -239,28 +239,51 @@ export function shouldSeedDemo(): boolean {
     return false
   }
 
-  // Check if there's already data (don't overwrite existing data)
+  // Check if there's already data in IndexedDB (don't overwrite existing data)
   try {
-    const existingData = localStorage.getItem('habit-tracker-data')
-    const existingProfiles = localStorage.getItem('habit-tracker-profiles')
-    const currentProfile = localStorage.getItem('habit-tracker-current-profile')
+    // Check IndexedDB for existing profiles
+    const request = indexedDB.open('habit-tracker-db')
     
-    console.log('Existing data check:', { 
-      hasData: !!existingData, 
-      hasProfiles: !!existingProfiles, 
-      hasCurrentProfile: !!currentProfile 
+    return new Promise<boolean>((resolve) => {
+      request.onsuccess = (event) => {
+        const db = (event.target as IDBOpenDBRequest).result
+        
+        if (!db.objectStoreNames.contains('profiles')) {
+          console.log('No profiles store found in IndexedDB - proceeding with demo seed')
+          resolve(true)
+          return
+        }
+        
+        const transaction = db.transaction(['profiles'], 'readonly')
+        const store = transaction.objectStore('profiles')
+        const getAllRequest = store.getAll()
+        
+        getAllRequest.onsuccess = () => {
+          const existingProfiles = getAllRequest.result
+          console.log('IndexedDB profiles check:', { profilesCount: existingProfiles.length })
+          
+          if (existingProfiles.length > 0) {
+            console.log('Existing profiles found in IndexedDB - skipping demo seed')
+            resolve(false)
+          } else {
+            console.log('No existing profiles in IndexedDB - proceeding with demo seed')
+            resolve(true)
+          }
+        }
+        
+        getAllRequest.onerror = () => {
+          console.warn('Error checking IndexedDB profiles:', getAllRequest.error)
+          resolve(false)
+        }
+      }
+      
+      request.onerror = () => {
+        console.warn('Error opening IndexedDB:', request.error)
+        resolve(false)
+      }
     })
-    
-    // More thorough check - only seed if there's truly no meaningful data
-    if (existingData || existingProfiles || currentProfile) {
-      console.log('Existing data found - skipping demo seed')
-      return false
-    }
-    
-    console.log('No existing data found - proceeding with demo seed')
-    return true
   } catch (error) {
-    console.warn('Error checking for existing data:', error)
+    console.warn('Error checking IndexedDB for existing data:', error)
     return false
   }
 }
@@ -268,7 +291,8 @@ export function shouldSeedDemo(): boolean {
 export async function seedDemoData(): Promise<void> {
   console.log('seedDemoData called')
   
-  if (!shouldSeedDemo()) {
+  const shouldSeed = await shouldSeedDemo()
+  if (!shouldSeed) {
     console.log('Demo seed conditions not met - exiting')
     return
   }
@@ -277,16 +301,14 @@ export async function seedDemoData(): Promise<void> {
     console.log('Creating demo data...')
     const demoData = createDemoSeed()
     
-    console.log('Saving demo profile...')
-    // Save demo profile
-    const profiles = {
-      [demoData.profile.id]: demoData.profile
-    }
-    localStorage.setItem('habit-tracker-profiles', JSON.stringify(profiles))
+    console.log('Creating demo profile in IndexedDB...')
+    // Create demo profile in IndexedDB using the same logic as AuthContext
+    const { db } = await import('../db')
     
-    console.log('Saving demo data with habits and check-ins...')
-    // Save demo data
-    const data: ProfileData = {
+    // Create demo profile with encrypted data
+    const { encryptProfileData } = await import('../lib/crypto')
+    
+    const profileData: ProfileData = {
       habits: demoData.habits,
       checkIns: demoData.checkIns,
       categories: [
@@ -305,11 +327,30 @@ export async function seedDemoData(): Promise<void> {
       },
       reminders: []
     }
-    localStorage.setItem('habit-tracker-data', JSON.stringify(data))
     
-    console.log('Setting current profile...')
-    // Set current profile
+    // Use demo password for encryption
+    const demoPassword = 'demo123'
+    const { encryptedData, salt, iv } = await encryptProfileData(profileData, demoPassword)
+    
+    // Create demo profile metadata
+    const demoProfile: ProfileMetadata = {
+      id: demoData.profile.id,
+      name: demoData.profile.name,
+      avatarColor: demoData.profile.avatarColor,
+      encryptedData,
+      salt,
+      iv,
+      createdAt: demoData.profile.createdAt,
+      updatedAt: demoData.profile.updatedAt
+    }
+    
+    // Save to IndexedDB
+    await db.profiles.add(demoProfile)
+    console.log('Demo profile saved to IndexedDB')
+    
+    // Set current profile in localStorage for immediate availability
     localStorage.setItem('habit-tracker-current-profile', demoData.profile.id)
+    localStorage.setItem('habit-tracker-demo-password', demoPassword)
     
     console.log('✅ Demo data seeded successfully', {
       profileId: demoData.profile.id,

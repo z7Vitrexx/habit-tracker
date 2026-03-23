@@ -10,7 +10,6 @@ import { OfflineStatus } from './components/OfflineStatus'
 import { AuthProvider } from './contexts/AuthContext'
 import { ReminderProvider } from './contexts/ReminderContext'
 import { useAuth } from './hooks/useAuth'
-import { seedDemoData } from './lib/demoSeed'
 
 // Lazy load heavy components with error handling
 const Statistics = lazy(() => 
@@ -103,12 +102,6 @@ function AppContent() {
 }
 
 function App() {
-  // Seed demo data on app startup if needed
-  useEffect(() => {
-    console.log('App mounted - checking demo seed conditions')
-    seedDemoData()
-  }, [])
-
   return (
     <ErrorBoundary>
       <AuthProvider>
