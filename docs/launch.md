@@ -179,6 +179,125 @@ npx vite-bundle-analyzer dist
 
 ---
 
+## 🚀 Vercel Test-Launch Checkliste
+
+### 📋 Vor dem Deploy
+
+- [ ] README ist vollständig und verständlich
+- [ ] Alle Links funktionieren (GitHub Issues, Release Notes)
+- [ ] Build und Typecheck sind stabil
+- [ ] PWA-Dateien werden mitdeployt
+- [ ] Mobile-Responsive-Design getestet
+
+### 🌐 Vercel Deploy
+
+**1. Repository importieren**
+- Vercel Dashboard → "New Project"
+- GitHub Repository: `z7Vitrexx/habit-tracker`
+- Framework Preset: "React"
+
+**2. Build-Einstellungen prüfen**
+- Build Command: `npm run build`
+- Output Directory: `dist`
+- Install Command: `npm install --legacy-peer-deps`
+
+**3. Deploy ausführen**
+- "Deploy" klicken
+- Auf Build-Fortschritt warten
+- Öffentliche URL notieren
+
+### 🧪 Smoke-Tests nach Deploy
+
+**Grundfunktionen:**
+- [ ] Seite lädt ohne Fehler
+- [ ] Profil erstellen funktioniert
+- [ ] Template-Auswahl funktioniert
+- [ ] Erste Gewohnheit anlegen funktioniert
+- [ ] Check-in funktioniert
+
+**Mobile-Tests:**
+- [ ] Mobile Layout funktioniert (Smartphone)
+- [ ] Touch-Zonen sind groß genug
+- [ ] Dialoge scrollen korrekt
+- [ ] Bottom-Navigation funktioniert
+
+**PWA-Tests:**
+- [ ] PWA-Install-Button erscheint (Chrome/Edge)
+- [ ] PWA-Installation funktioniert
+- [ ] PWA startet im Standalone-Modus
+- [ ] Offline-Funktionalität funktioniert
+
+**Daten-Tests:**
+- [ ] Import/Export funktioniert
+- [ ] Backup-Download funktioniert
+- [ ] Backup-Upload funktioniert
+- [ ] Daten bleiben nach Reload
+
+**Erinnerungen:**
+- [ ] Permission-Status wird korrekt angezeigt
+- [ ] Testbenachrichtigung funktioniert
+- [ ] Erinnerungs-Übersicht funktioniert
+
+### 🆘 Troubleshooting
+
+**Build-Fehler auf Vercel:**
+```bash
+# Lokal testen
+npm install --legacy-peer-deps
+npm run build
+```
+
+**PWA-Probleme:**
+- Manifest prüfen: `/manifest.webmanifest` muss erreichbar sein
+- Service Worker prüfen: `/sw.js` muss erreichbar sein
+- HTTPS muss aktiv sein (automatisch auf Vercel)
+
+**Mobile-Probleme:**
+- Viewport Meta-Tag prüfen
+- Touch-Zonen prüfen (mindestens 44px)
+- Responsive Design prüfen
+
+**Daten-Probleme:**
+- IndexedDB muss unterstützt werden
+- LocalStorage nicht blockiert
+- Browser-Cache prüfen
+
+### 📊 Erfolgskriterien
+
+**Technisch:**
+- [ ] Build-Zeit < 2 Minuten auf Vercel
+- [ ] Ladezeit < 3 Sekunden
+- [ ] PWA-Installation funktioniert
+- [ ] Mobile Layout funktioniert
+
+**Funktional:**
+- [ ] Alle Hauptfunktionen arbeiten
+- [ ] Daten bleiben persistent
+- [ ] Import/Export funktioniert
+- [ ] Erinnerungen funktionieren
+
+**UX:**
+- [ ] App ist nutzbar ohne Anleitung
+- [ ] Mobile-UX ist angenehm
+- [ ] Fehlermeldungen sind hilfreich
+- [ ] Performance ist akzeptabel
+
+---
+
+## 🎉 Test-Launch Ready!
+
+**Habit Tracker Pro v1.1 ist bereit für den Vercel Test-Launch:**
+
+- ✅ Vollständige README mit Tester-Hinweisen
+- ✅ Build-Einstellungen optimiert
+- ✅ PWA-Dateien werden korrekt mitdeployt
+- ✅ Mobile-Responsive getestet
+- ✅ Smoke-Test-Checkliste vorbereitet
+
+**Jetzt auf Vercel deployen und testen!** 🚀
+
+---
+
 ## 🎉 Launch-Ready!
 
 Habit Tracker Pro v1.1 ist bereit für den öffentlichen Launch mit:

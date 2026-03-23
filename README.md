@@ -104,8 +104,9 @@ npm run preview
 
 **🔒 Lokale Datenspeicherung**
 - Alle Daten werden ausschließlich im Browser gespeichert (IndexedDB)
-- Kein Cloud-Sync, keine Server-Verbindung
+- **Kein Cloud-Sync, keine Server-Verbindung**
 - Daten sind profil- und browserspezifisch
+- **Für Tester:** Eure Daten bleiben nur auf eurem Gerät/Browser
 
 **📱 PWA-Installation**
 - Für PWA-Installation muss Production Build verwendet werden
@@ -116,6 +117,11 @@ npm run preview
 - Erinnerungen funktionieren nur im aktiven Browser
 - Benachrichtigungen müssen im Browser erlaubt werden
 - Keine systemweiten Push-Benachrichtigungen wie native Apps
+
+**💾 Daten-Sicherung für Tester**
+- **Wichtig:** Erstellt regelmäßig Backups über Einstellungen → Datenverwaltung
+- Exportierte JSON-Dateien sichern (Cloud, USB-Stick, etc.)
+- Bei Browser-Problemen sind sonst alle Daten verloren
 
 ### Erste Schritte
 
@@ -416,55 +422,75 @@ Bei PWA-Problemen:
 2. **Service Worker aktualisieren** - Seite neu laden oder PWA neu installieren
 3. **Production Build** - PWA-Installation nur mit `npm run build && npm run preview`
 
-## 🌐 Öffentliches Deployment
+## 🌐 Öffentlicher Test-Launch (Vercel)
 
-### Vercel (empfohlen)
+### 🚀 Schneller Vercel-Deploy
 
-1. **GitHub Repository verbinden**
-   - Vercel Dashboard → "New Project"
-   - GitHub Repository auswählen
-   - Framework Preset: "React"
+**1. GitHub Repository importieren**
+- Vercel Dashboard → "New Project"
+- GitHub Repository: `z7Vitrexx/habit-tracker`
+- Framework Preset: "React"
 
-2. **Build-Einstellungen**
-   - **Build Command:** `npm run build`
-   - **Output Directory:** `dist`
-   - **Install Command:** `npm install --legacy-peer-deps`
+**2. Build-Einstellungen (automatisch erkannt)**
+- **Build Command:** `npm run build`
+- **Output Directory:** `dist`
+- **Install Command:** `npm install --legacy-peer-deps`
 
-3. **Environment Variablen**
-   - Keine erforderlich (App läuft vollständig lokal)
+**3. Deployen**
+- "Deploy" klicken
+- **Fertig!** App läuft unter `*.vercel.app`
 
-4. **Deployen**
-   - "Deploy" klicken
-   - Fertig! App läuft unter `*.vercel.app`
+### 📱 Test-Launch Checkliste
 
-### Netlify
+**Nach dem Deploy:**
+- [ ] Seite lädt ohne Fehler
+- [ ] PWA-Install-Button erscheint (Desktop Chrome/Edge)
+- [ ] Mobile Layout funktioniert (Smartphone/Tablet)
+- [ ] Profil erstellen funktioniert
+- [ ] Template-Auswahl funktioniert
+- [ ] Check-in funktioniert
+- [ ] Statistik lädt
+- [ ] Import/Export funktioniert
 
-1. **GitHub Repository verbinden**
-   - Netlify Dashboard → "Add new site"
-   - GitHub Repository auswählen
+**⚠️ Wichtige Hinweise für Tester:**
+- **Daten bleiben lokal:** Alle Test-Daten nur im Browser gespeichert
+- **Kein Cloud-Sync:** Daten werden nicht synchronisiert
+- **Browser-spezifisch:** Daten nur im jeweiligen Browser verfügbar
+- **Regelmäßig Backups:** Einstellungen → Datenverwaltung → Backup erstellen
 
-2. **Build-Einstellungen**
-   - **Build command:** `npm run build`
-   - **Publish directory:** `dist`
-   - **Build command:** `npm install --legacy-peer-deps && npm run build`
-
-3. **Deployen**
-   - "Deploy site" klicken
-   - Fertig!
-
-### Wichtige Hinweise für Deployment
+### 🔧 Technische Details
 
 **🔒 Keine Environment Variablen nötig**
 - Die App benötigt keine API-Keys oder Secrets
 - Alle Daten werden lokal im Browser gespeichert
 
 **📱 PWA-Unterstützung**
-- Auf Vercel/Netlify funktioniert die PWA-Installation automatisch
+- Auf Vercel funktioniert die PWA-Installation automatisch
 - HTTPS wird automatisch bereitgestellt
+- Service Worker ist konfiguriert
 
 **⚡ Performance**
 - Lazy Loading ist bereits konfiguriert
 - Bundle-Größe ist optimiert (~680KB)
+- Offline-fähig
+
+### 🆘 Bei Problemen
+
+**Build-Fehler:**
+```bash
+npm install --legacy-peer-deps
+npm run build
+```
+
+**PWA-Probleme:**
+- Browser-Cache leeren
+- Seite neu laden
+- Production Build verwenden
+
+**Daten-Probleme:**
+- Backup erstellen vor Tests
+- Bei Problemen: Browser neu starten
+- Daten sind browserspezifisch
 
 ## 📞 Support
 
