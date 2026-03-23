@@ -510,53 +510,117 @@ Möchtest du wirklich fortfahren?`
             Informationen und technische Details zu Habit Tracker Pro
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-3">
+        <CardContent className="space-y-6">
+          <div className="space-y-4">
             <div>
-              <h4 className="font-medium mb-2">🔒 Datenschutz & Sicherheit</h4>
-              <div className="text-sm text-muted-foreground space-y-1">
-                <p>• **100% lokal:** Deine Daten verlassen niemals dein Gerät</p>
-                <p>• **Verschlüsselt:** Militärischer AES-256 Passwortschutz</p>
-                <p>• **Kein Cloud-Sync:** Alles läuft nur in deinem Browser</p>
-                <p>• **Keine Tracker:** Die App sammelt keine Nutzerdaten</p>
-              </div>
+              <h4 className="font-medium mb-3 flex items-center space-x-2">
+                <span className="text-lg">🔒</span>
+                <span>Datenschutz & Sicherheit</span>
+              </h4>
+              <ul className="text-sm text-muted-foreground space-y-2 ml-6">
+                <li className="flex items-start">
+                  <span className="text-primary mr-2">•</span>
+                  <span><strong>100% lokal:</strong> Deine Daten verlassen niemals dein Gerät</span>
+                </li>
+                <li className="flex items-start">
+                  <span className="text-primary mr-2">•</span>
+                  <span><strong>Verschlüsselt:</strong> Militärischer AES-256 Passwortschutz</span>
+                </li>
+                <li className="flex items-start">
+                  <span className="text-primary mr-2">•</span>
+                  <span><strong>Kein Cloud-Sync:</strong> Alles läuft nur in deinem Browser</span>
+                </li>
+                <li className="flex items-start">
+                  <span className="text-primary mr-2">•</span>
+                  <span><strong>Keine Tracker:</strong> Die App sammelt keine Nutzerdaten</span>
+                </li>
+              </ul>
             </div>
             
             <div>
-              <h4 className="font-medium mb-2">🔔 Erinnerungen - Technische Grenzen</h4>
-              <div className="text-sm text-muted-foreground space-y-1">
-                <p>• **Nur im aktiven Browser:** Funktioniert nur wenn Browser läuft</p>
-                <p>• **Keine systemweiten Erinnerungen:** Wie native Apps</p>
-                <p>• **Browser-spezifisch:** Gebunden an deinen Browser</p>
-                <p>• **Keine Garantie:** Betriebssystem kann blockieren</p>
-              </div>
+              <h4 className="font-medium mb-3 flex items-center space-x-2">
+                <span className="text-lg">🔔</span>
+                <span>Erinnerungen - Technische Grenzen</span>
+              </h4>
+              <ul className="text-sm text-muted-foreground space-y-2 ml-6">
+                <li className="flex items-start">
+                  <span className="text-primary mr-2">•</span>
+                  <span><strong>Nur im aktiven Browser:</strong> Funktioniert nur wenn Browser läuft</span>
+                </li>
+                <li className="flex items-start">
+                  <span className="text-primary mr-2">•</span>
+                  <span><strong>Keine systemweiten Erinnerungen:</strong> Wie native Apps</span>
+                </li>
+                <li className="flex items-start">
+                  <span className="text-primary mr-2">•</span>
+                  <span><strong>Browser-spezifisch:</strong> Gebunden an deinen Browser</span>
+                </li>
+                <li className="flex items-start">
+                  <span className="text-primary mr-2">•</span>
+                  <span><strong>Keine Garantie:</strong> Betriebssystem kann blockieren</span>
+                </li>
+              </ul>
             </div>
             
             <div>
-              <h4 className="font-medium mb-2">📤 Daten-Sicherung</h4>
-              <div className="text-sm text-muted-foreground space-y-1">
-                <p>• **Regelmäßig exportieren:** Sichere deine Fortschritte</p>
-                <p>• **Gerätewechsel:** Manuellexport/import notwendig</p>
-                <p>• **JSON-Format:** Menschlich lesbares Backup</p>
-                <p>• **Version 1.0:** Kompatibel für zukünftige Updates</p>
-              </div>
+              <h4 className="font-medium mb-3 flex items-center space-x-2">
+                <span className="text-lg">📤</span>
+                <span>Daten-Sicherung</span>
+              </h4>
+              <ul className="text-sm text-muted-foreground space-y-2 ml-6">
+                <li className="flex items-start">
+                  <span className="text-primary mr-2">•</span>
+                  <span><strong>Regelmäßig exportieren:</strong> Sichere deine Fortschritte</span>
+                </li>
+                <li className="flex items-start">
+                  <span className="text-primary mr-2">•</span>
+                  <span><strong>Gerätewechsel:</strong> Manuellexport/import notwendig</span>
+                </li>
+                <li className="flex items-start">
+                  <span className="text-primary mr-2">•</span>
+                  <span><strong>JSON-Format:</strong> Menschlich lesbares Backup</span>
+                </li>
+                <li className="flex items-start">
+                  <span className="text-primary mr-2">•</span>
+                  <span><strong>Version 1.0:</strong> Kompatibel für zukünftige Updates</span>
+                </li>
+              </ul>
             </div>
             
             <div>
-              <h4 className="font-medium mb-2">🛠️ Technologie</h4>
-              <div className="text-sm text-muted-foreground space-y-1">
-                <p>• **React 19 + TypeScript:** Moderne Web-Technologie</p>
-                <p>• **PWA:** Installierbar wie eine native App</p>
-                <p>• **IndexedDB:** Lokale Datenspeicherung</p>
-                <p>• **Web Crypto API:** Sichere clientseitige Verschlüsselung</p>
-              </div>
+              <h4 className="font-medium mb-3 flex items-center space-x-2">
+                <span className="text-lg">🛠️</span>
+                <span>Technologie</span>
+              </h4>
+              <ul className="text-sm text-muted-foreground space-y-2 ml-6">
+                <li className="flex items-start">
+                  <span className="text-primary mr-2">•</span>
+                  <span><strong>React 19 + TypeScript:</strong> Moderne Web-Technologie</span>
+                </li>
+                <li className="flex items-start">
+                  <span className="text-primary mr-2">•</span>
+                  <span><strong>PWA:</strong> Installierbar wie eine native App</span>
+                </li>
+                <li className="flex items-start">
+                  <span className="text-primary mr-2">•</span>
+                  <span><strong>IndexedDB:</strong> Lokale Datenspeicherung</span>
+                </li>
+                <li className="flex items-start">
+                  <span className="text-primary mr-2">•</span>
+                  <span><strong>Web Crypto API:</strong> Sichere clientseitige Verschlüsselung</span>
+                </li>
+              </ul>
             </div>
             
-            <div className="pt-3 border-t">
-              <p className="text-xs text-muted-foreground">
-                <strong>Habit Tracker Pro v1.0</strong><br />
-                Eine private, sichere und funktionale Habit-Tracking App ohne Kompromisse beim Datenschutz.
-              </p>
+            <div className="pt-4 border-t">
+              <div className="bg-muted/50 rounded-lg p-4">
+                <p className="text-sm font-medium text-center">
+                  <strong>Habit Tracker Pro v1.0</strong>
+                </p>
+                <p className="text-xs text-muted-foreground text-center mt-1">
+                  Eine private, sichere und funktionale Habit-Tracking App ohne Kompromisse beim Datenschutz.
+                </p>
+              </div>
             </div>
           </div>
         </CardContent>

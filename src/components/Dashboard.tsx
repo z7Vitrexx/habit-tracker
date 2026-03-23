@@ -4,7 +4,8 @@ import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Textarea } from './ui/textarea'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog'
-import { CheckCircle2, TrendingUp, Calendar, Target } from 'lucide-react'
+import { Target, Calendar, CheckCircle, TrendingUp } from 'lucide-react'
+import { getIcon } from '../lib/iconMapping'
 import { useAuth } from '../hooks/useAuth'
 import { useCheckIns } from '../hooks/useCheckIns'
 import type { Habit, CheckInStatus } from '../types'
@@ -267,7 +268,7 @@ export function Dashboard() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Heute erledigt</CardTitle>
-            <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
+            <CheckCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{completedCount}</div>
@@ -354,7 +355,7 @@ export function Dashboard() {
             <CardContent className="pt-8 pb-6">
               <div className="text-center space-y-4">
                 <div className="w-16 h-16 bg-muted rounded-2xl flex items-center justify-center mx-auto">
-                  <CheckCircle2 className="w-8 h-8 text-muted-foreground" />
+                  <CheckCircle className="w-8 h-8 text-muted-foreground" />
                 </div>
                 <div>
                   <h3 className="text-lg font-semibold mb-2">Heute keine geplanten Habits</h3>
@@ -381,11 +382,10 @@ export function Dashboard() {
                           className="w-12 h-12 rounded-xl border-2 border-white shadow-md flex items-center justify-center flex-shrink-0"
                           style={{ backgroundColor: habit.color }}
                         >
-                          {habit.icon ? (
-                            <span className="text-white text-xl">{habit.icon}</span>
-                          ) : (
-                            <Target className="w-6 h-6 text-white" />
-                          )}
+                          {(() => {
+                            const IconComponent = getIcon(habit.icon)
+                            return <IconComponent className="w-6 h-6 text-white" />
+                          })()}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center space-x-3 mb-2">

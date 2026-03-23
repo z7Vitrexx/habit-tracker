@@ -78,6 +78,28 @@ export function AppLayout({ children, currentView, onViewChange }: AppLayoutProp
         </div>
       </header>
 
+      {/* Desktop Navigation */}
+      <nav className="hidden md:block border-b bg-background">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex space-x-8">
+            {navigation.map((item) => (
+              <button
+                key={item.id}
+                onClick={() => onViewChange(item.id)}
+                className={`flex items-center space-x-2 py-4 px-1 border-b-2 transition-colors ${
+                  currentView === item.id
+                    ? 'border-primary text-primary'
+                    : 'border-transparent text-muted-foreground hover:text-foreground hover:border-muted'
+                }`}
+              >
+                <item.icon className="w-4 h-4" />
+                <span className="font-medium">{item.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </nav>
+
       {/* Page Header */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="mb-6">

@@ -451,7 +451,7 @@ export function Statistics() {
         </CardContent>
       </Card>
 
-      {/* Heatmap */}
+      {/* Compact Heatmap */}
       {selectedHabit && (
         <Card>
           <CardHeader>
@@ -461,54 +461,66 @@ export function Statistics() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-8 gap-1 text-xs">
-              <div className="col-span-1"></div>
-              {['M', 'D', 'M', 'D', 'F', 'S', 'S'].map((day, i) => (
-                <div key={i} className="text-center text-muted-foreground h-4">
-                  {day}
-                </div>
-              ))}
-              
-              {Array.from({ length: 53 }, (_, weekIndex) => (
-                <React.Fragment key={weekIndex}>
+            <div className="overflow-x-auto">
+              <div className="inline-block min-w-full">
+                <div className="grid grid-cols-54 gap-1 text-xs mb-2">
                   <div className="col-span-1"></div>
-                  {Array.from({ length: 7 }, (_, dayIndex) => {
-                    const dayData = heatmapData[weekIndex * 7 + dayIndex]
-                    const intensity = dayData?.value || 0
-                    
-                    return (
-                      <div
-                        key={`${weekIndex}-${dayIndex}`}
-                        className={`w-4 h-4 rounded-sm border ${
-                          intensity === 0 ? 'bg-muted' :
-                          intensity === 0.5 ? 'bg-yellow-200' :
-                          'bg-green-500'
-                        }`}
-                        title={`${dayData?.date || ''}: ${
-                          intensity === 0 ? 'Kein Eintrag' :
-                          intensity === 0.5 ? 'Übersprungen' :
-                          'Erledigt'
-                        }`}
-                      />
-                    )
-                  })}
-                </React.Fragment>
-              ))}
+                  {['M', 'D', 'M', 'D', 'F', 'S', 'S'].map((day, i) => (
+                    <div key={i} className="text-center text-muted-foreground w-3 h-3 flex items-center justify-center">
+                      {day}
+                    </div>
+                  ))}
+                </div>
+                
+                <div className="grid grid-cols-54 gap-1">
+                  {Array.from({ length: 53 }, (_, weekIndex) => (
+                    <React.Fragment key={weekIndex}>
+                      <div className="text-xs text-muted-foreground w-3 h-3 flex items-center justify-center">
+                        {weekIndex % 4 === 0 ? format(new Date(new Date().setDate(new Date().getDate() - (52 - weekIndex) * 7)), 'MMM') : ''}
+                      </div>
+                      {Array.from({ length: 7 }, (_, dayIndex) => {
+                        const dayData = heatmapData[weekIndex * 7 + dayIndex]
+                        const intensity = dayData?.value || 0
+                        
+                        return (
+                          <div
+                            key={`${weekIndex}-${dayIndex}`}
+                            className={`w-3 h-3 rounded-sm border transition-colors ${
+                              intensity === 0 ? 'bg-muted/30 border-muted/50' :
+                              intensity === 0.5 ? 'bg-yellow-300/60 border-yellow-400/40' :
+                              'bg-green-500/80 border-green-600/60'
+                            }`}
+                            title={`${dayData?.date || ''}: ${
+                              intensity === 0 ? 'Kein Eintrag' :
+                              intensity === 0.5 ? 'Übersprungen' :
+                              'Erledigt'
+                            }`}
+                          />
+                        )
+                      })}
+                    </React.Fragment>
+                  ))}
+                </div>
+              </div>
             </div>
             
-            <div className="flex items-center space-x-4 mt-4 text-sm text-muted-foreground">
+            <div className="flex items-center justify-center space-x-6 mt-6 text-sm text-muted-foreground">
               <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-muted rounded-sm border"></div>
+                <div className="w-3 h-3 bg-muted/30 rounded-sm border-muted/50 border"></div>
                 <span>Kein Eintrag</span>
               </div>
               <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-yellow-200 rounded-sm border"></div>
+                <div className="w-3 h-3 bg-yellow-300/60 rounded-sm border-yellow-400/40 border"></div>
                 <span>Übersprungen</span>
               </div>
               <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-green-500 rounded-sm border"></div>
+                <div className="w-3 h-3 bg-green-500/80 rounded-sm border-green-600/60 border"></div>
                 <span>Erledigt</span>
               </div>
+            </div>
+            
+            <div className="text-center mt-4 text-xs text-muted-foreground">
+              Letzte 365 Tage • {heatmapData.filter(d => d.value > 0).length} aktive Tage
             </div>
           </CardContent>
         </Card>

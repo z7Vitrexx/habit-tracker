@@ -15,7 +15,6 @@ export function useReminders() {
   // Check if notifications are supported and load persisted permission
   useEffect(() => {
     const isNotificationSupported = 'Notification' in window
-    setIsSupported(isNotificationSupported)
     
     if (isNotificationSupported) {
       const currentPermission = Notification.permission as NotificationPermission
@@ -24,10 +23,11 @@ export function useReminders() {
       // Load saved permission from localStorage if available
       const savedPermission = localStorage.getItem('notificationPermission') as NotificationPermission
       if (savedPermission && savedPermission !== currentPermission) {
-        // Permission might have changed in browser settings
-        console.log('[Reminder] Permission mismatch: browser=', currentPermission, 'saved=', savedPermission)
+        // Permission might have changed in browser settings - silently handle
       }
     }
+    
+    setIsSupported(isNotificationSupported)
   }, [])
 
   // Save permission to localStorage when it changes
@@ -106,27 +106,17 @@ export function useReminders() {
   // Test reminder for specific habit (for testing purposes)
   const testReminderForHabit = useCallback((habitId: string) => {
     if (!profileData || permission !== 'granted') {
-      console.log(`[Reminder] Test failed - no profileData or permission not granted. Permission: ${permission}`)
       return false
     }
 
     const habit = profileData.habits.find(h => h.id === habitId)
-    console.log(`[Reminder] Test button clicked - habitId: ${habitId}, found habit:`, habit?.name, 'reminderEnabled:', habit?.reminderEnabled)
     
     if (!habit) {
-      console.log(`[Reminder] Test failed - habit not found for ID: ${habitId}`)
       return false
     }
 
     // For testing, we allow testing even if reminder is not enabled
-    console.log(`[Reminder] Testing notification for ${habit.name}`)
     const success = showNotification(habit.name, habit.icon)
-    
-    if (success) {
-      console.log(`[Reminder] Test notification successful for ${habit.name}`)
-    } else {
-      console.log(`[Reminder] Test notification failed for ${habit.name}`)
-    }
     
     return success
   }, [profileData, permission, showNotification])
@@ -143,14 +133,12 @@ export function useReminders() {
     }
 
     // Show notification immediately for testing
-    console.log(`[Reminder] Testing reminder for ${habit.name}`)
     const success = showNotification(habit.name, habit.icon)
     
     if (success) {
       // Record that we reminded today for testing
       const today = new Date().toISOString().split('T')[0]
       lastReminderTriggers.set(habitId, today)
-      console.log(`[Reminder] Test reminder recorded for ${habit.name}`)
     }
     
     return success
@@ -165,7 +153,6 @@ export function useReminders() {
   // Check and trigger reminders (should be called periodically)
   const checkReminders = useCallback(() => {
     if (!profileData || permission !== 'granted') {
-      console.log(`[Reminder] Check skipped - no profileData or permission not granted. Permission: ${permission}`)
       return
     }
 
@@ -173,26 +160,18 @@ export function useReminders() {
     const currentHour = now.getHours()
     const currentMinute = now.getMinutes()
     const today = now.toISOString().split('T')[0]
-    
-    // Debug logging
-    console.log(`[Reminder] Checking reminders at ${currentHour.toString().padStart(2, '0')}:${currentMinute.toString().padStart(2, '0')}`)
-    console.log(`[Reminder] Found ${profileData.habits.length} habits to check`)
 
     // Get today's check-ins to avoid duplicate notifications
     const todayCheckIns = profileData.checkIns.filter(ci => ci.date === today)
 
-    profileData.habits.forEach((habit, index) => {
-      console.log(`[Reminder] Checking habit ${index + 1}: ${habit.name}, status: ${habit.status}, reminderEnabled: ${habit.reminderEnabled}, reminderTime: ${habit.reminderTime}`)
-      
+    profileData.habits.forEach((habit) => {
       // Only check active habits with enabled reminders
       if (habit.status !== 'active' || !habit.reminderEnabled || !habit.reminderTime) {
-        console.log(`[Reminder] Skipping ${habit.name} - not active or no reminder enabled/time`)
         return
       }
 
       // Check if habit should be reminded today based on frequency
       const shouldRemind = shouldRemindToday(habit)
-      console.log(`[Reminder] shouldRemindToday for ${habit.name}: ${shouldRemind}`)
       
       if (!shouldRemind) {
         return
@@ -200,7 +179,6 @@ export function useReminders() {
 
       // Parse reminder time robustly
       const [reminderHour, reminderMinute] = habit.reminderTime.split(':').map(Number)
-      console.log(`[Reminder] Parsed reminder time for ${habit.name}: ${reminderHour}:${reminderMinute.toString().padStart(2, '0')}`)
       
       // Check if we're in the reminder time window (current minute or previous minute to account for timing)
       const isReminderTime = 
@@ -208,42 +186,31 @@ export function useReminders() {
         (currentHour === reminderHour && currentMinute === reminderMinute + 1) ||
         (currentHour === reminderHour && currentMinute === reminderMinute - 1)
 
-      console.log(`[Reminder] Time match for ${habit.name}: current=${currentHour}:${currentMinute.toString().padStart(2, '0')}, reminder=${reminderHour}:${reminderMinute.toString().padStart(2, '0')}, isMatch=${isReminderTime}`)
-
       if (!isReminderTime) {
         return
       }
 
       // Check if already checked in today
       const alreadyCheckedIn = todayCheckIns.some(ci => ci.habitId === habit.id)
-      console.log(`[Reminder] alreadyCheckedIn for ${habit.name}: ${alreadyCheckedIn}`)
       
       if (alreadyCheckedIn) {
-        console.log(`[Reminder] Skipping ${habit.name} - already checked in today`)
         return
       }
 
       // Check if already reminded today
       const lastTriggerKey = lastReminderTriggers.get(habit.id)
       const alreadyRemindedToday = lastTriggerKey === today
-      console.log(`[Reminder] alreadyRemindedToday for ${habit.name}: ${alreadyRemindedToday} (last: ${lastTriggerKey}, today: ${today})`)
       
       if (alreadyRemindedToday) {
-        console.log(`[Reminder] Skipping ${habit.name} - already reminded today`)
         return
       }
 
       // Trigger notification
-      console.log(`[Reminder] TRIGGERING notification for ${habit.name} at ${habit.reminderTime}`)
       const success = showNotification(habit.name, habit.icon)
-      console.log(`[Reminder] showNotification result for ${habit.name}: ${success}`)
       
       if (success) {
         // Record that we reminded today
         lastReminderTriggers.set(habit.id, today)
-        console.log(`[Reminder] Successfully triggered and recorded reminder for ${habit.name}`)
-      } else {
-        console.log(`[Reminder] Failed to trigger notification for ${habit.name}`)
       }
     })
   }, [profileData, permission, shouldRemindToday, showNotification])
@@ -251,22 +218,20 @@ export function useReminders() {
   // Set up periodic reminder checking
   useEffect(() => {
     if (!isSupported || permission !== 'granted') {
-      console.log(`[Reminder] Scheduler not starting - supported: ${isSupported}, permission: ${permission}`)
       return
     }
 
-    console.log('[Reminder] Starting scheduler - checking every 30 seconds')
-    
-    // Check every 30 seconds for more reliable triggering
-    const interval = setInterval(checkReminders, 30000)
-
-    // Check immediately on mount
-    console.log('[Reminder] Initial check on mount')
-    checkReminders()
+    const interval = setInterval(checkReminders, 60000) // Check every minute
 
     return () => {
-      console.log('[Reminder] Stopping scheduler')
       clearInterval(interval)
+    }
+  }, [isSupported, permission, checkReminders])
+
+  // Initial check on mount
+  useEffect(() => {
+    if (isSupported && permission === 'granted') {
+      checkReminders()
     }
   }, [isSupported, permission, checkReminders])
 

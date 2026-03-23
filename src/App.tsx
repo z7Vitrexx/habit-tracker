@@ -21,8 +21,6 @@ function AppContent() {
   const { isUnlocked } = auth
   const [currentView, setCurrentView] = useState<ViewType>('dashboard')
 
-  console.log('[App] AppContent rendered, isUnlocked:', isUnlocked)
-
   if (!isUnlocked) {
     return <ProfileSelection />
   }

@@ -29,7 +29,7 @@ export function History() {
     if (activeHabits.length > 0 && !selectedHabit) {
       setSelectedHabit(activeHabits[0])
     }
-  }, [activeHabits, selectedHabit])
+  }, [activeHabits.length, selectedHabit])
 
   const getMonthDays = () => {
     const monthStart = startOfMonth(currentMonth)
