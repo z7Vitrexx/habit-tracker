@@ -12,6 +12,7 @@ import type { Habit, CheckInStatus } from '../types'
 import { format, startOfWeek, endOfWeek, eachDayOfInterval } from 'date-fns'
 import { de } from 'date-fns/locale'
 import { WelcomeScreen } from './WelcomeScreen'
+import { DemoHint } from './DemoHint'
 
 export function Dashboard() {
   const { profileData } = useAuth()
@@ -63,7 +64,9 @@ export function Dashboard() {
     setTodayCheckIns(checkInMap)
   }, [profileData, getTodayCheckIns])
 
-  const handleQuickCheckIn = async (habit: Habit, status: CheckInStatus) => {
+  // Quick check-in handler (currently unused, kept for future implementation)
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const handleQuickCheckIn = async (habit: Habit, status: CheckInStatus) => {
     const currentStatus = getCheckInStatus(habit.id)
     
     // If clicking the same status, undo/remove it
@@ -169,7 +172,9 @@ export function Dashboard() {
     return checkIn?.status || 'not_scheduled'
   }
 
-  const getCheckInValue = (habitId: string): number | undefined => {
+  // Get check-in value (currently unused, kept for future implementation)
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const getCheckInValue = (habitId: string): number | undefined => {
     const checkIn = todayCheckIns[habitId]
     return checkIn?.value
   }
@@ -276,6 +281,7 @@ export function Dashboard() {
 
   return (
     <div className="space-y-5 sm:space-y-8">
+      <DemoHint />
       {/* Header */}
       <div>
         <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Dashboard</h1>
@@ -391,7 +397,6 @@ export function Dashboard() {
           <div className="grid gap-4">
             {todayHabits.map(habit => {
               const status = getCheckInStatus(habit.id)
-              const value = getCheckInValue(habit.id)
               const note = getCheckInNote(habit.id)
               
               return (
@@ -409,72 +414,8 @@ export function Dashboard() {
                           })()}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center space-x-3 mb-2">
-                            <h3 className="font-semibold text-base">{habit.name}</h3>
-                            {habit.type === 'quantitative' && (
-                              <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full font-medium">
-                                Quantitativ
-                              </span>
-                            )}
-                            {status !== 'not_scheduled' && (
-                              <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-                                status === 'done' ? 'bg-green-100 text-green-800' :
-                                status === 'missed' ? 'bg-red-100 text-red-800' :
-                                'bg-yellow-100 text-yellow-800'
-                              }`}>
-                                {status === 'done' ? 'Erledigt' :
-                                 status === 'missed' ? 'Verpasst' : 'Übersprungen'}
-                              </span>
-                            )}
-                          </div>
-                          {habit.description && (
-                            <p className="text-sm text-muted-foreground">{habit.description}</p>
-                          )}
-                          {status === 'done' && (
-                            <div className="mt-2 space-y-1">
-                              {habit.type === 'quantitative' && value && (
-                                <p className="text-sm font-medium text-green-700">
-                                  Wert: {value} {habit.frequency.targetValue && `/ ${habit.frequency.targetValue}`}
-                                </p>
-                              )}
-                            </div>
-                          )}
-                          {note && (
-                            <p className="text-sm text-muted-foreground mt-2">Notiz: {note}</p>
-                          )}
                         </div>
                       </div>
-                    </div>
-                    
-                    {/* Primary Actions */}
-                    <div className="flex flex-wrap gap-2 mt-4">
-                      <Button
-                        size="sm"
-                        variant={status === 'done' ? 'default' : 'outline'}
-                        onClick={() => handleQuickCheckIn(habit, 'done')}
-                        disabled={isProcessing}
-                        className="min-h-[36px] px-3"
-                      >
-                        Erledigt
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant={status === 'missed' ? 'default' : 'outline'}
-                        onClick={() => handleQuickCheckIn(habit, 'missed')}
-                        disabled={isProcessing}
-                        className="min-h-[36px] px-3"
-                      >
-                        Verpasst
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant={status === 'skipped' ? 'default' : 'outline'}
-                        onClick={() => handleQuickCheckIn(habit, 'skipped')}
-                        disabled={isProcessing}
-                        className="min-h-[36px] px-3"
-                      >
-                        Übersprungen
-                      </Button>
                     </div>
                     
                     {/* Secondary Actions - nur wenn Status gesetzt */}
