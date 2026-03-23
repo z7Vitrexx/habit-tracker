@@ -93,7 +93,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         clearTimeout(autoLockTimer)
       }
     }
-  }, [isUnlocked, profileData?.settings.autoLockMinutes, autoLockTimer])
+  }, [isUnlocked, profileData?.settings.autoLockMinutes])
 
   // Load profiles on mount
   useEffect(() => {
