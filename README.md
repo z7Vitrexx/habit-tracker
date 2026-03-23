@@ -1,6 +1,8 @@
-# Habit Tracker Pro v1.1
+# Habit Tracker Pro v1.1 🚀
 
 Eine moderne, lokal laufende Habit-Tracker PWA mit Passwortschutz, Verschlüsselung und verbesserter Mobile-UX.
+
+> **🎉 v1.1 ist jetzt verfügbar!** Mobile-UX komplett überarbeitet, Onboarding mit Templates, verständliche Statistiken und vertrauenswürdige Datenverwaltung. [Mehr über v1.1](#-neu-in-v11)
 
 ## 🎯 Was ist Habit Tracker Pro?
 
@@ -17,12 +19,14 @@ Habit Tracker Pro ist eine **local-first** Web-App, die es ermöglicht, Gewohnhe
 
 ### ✨ Neu in v1.1
 
-- **📱 Mobile-UX verbessert** - Bessere Touch-Bedienung und responsive Layouts
-- **🎯 Onboarding mit Templates** - Schneller Einstieg mit vorgefertigten Gewohnheiten
-- **📊 Statistik-Verbesserungen** - Bessere Charts und mobile Ansichten
-- **📤 Vertrauenswürdige Daten-UX** - Klare Backup/Import-Dialoge und lokale Speicherung
-- **🔔 Ehrliche Reminder-UX** - Klare Hinweise zu technischen Browser-Grenzen
-- **⚡ Performance** - Lazy Loading und optimierte Komponenten
+- **📱 Mobile-UX komplett überarbeitet** - Große Touch-Zonen, responsive Layouts, saubere Mobile-Dialoge
+- **🎯 Onboarding mit Templates** - WelcomeScreen mit 12 Starter-Templates für schnellen Start
+- **📊 Statistik verständlicher gemacht** - Aktuelle Wochen-Übersicht, mobile Charts, bessere Trends
+- **📤 Vertrauenswürdige Daten-UX** - 4 separate Karten, Custom Dialoge, Erfolgsmeldungen für Backup
+- **🔔 Ehrliche Reminder-UX** - Klare Übersicht aller Erinnerungen, prominente Browser-Grenzen
+- **⚡ Performance & Stabilität** - Lazy Loading, Error Boundaries, Bundle-Größe reduziert (~680KB)
+
+[📋 Detaillierte Release Notes](RELEASE_NOTES_v1.1.md) | [📊 v1.1 Roadmap](docs/v1.1-roadmap.md)
 
 ### ✨ Hauptfunktionen
 
@@ -352,6 +356,39 @@ Bei Problemen oder Fragen:
 2. **Neues Issue** - Erstelle ein Issue mit detaillierter Beschreibung
 3. **Screenshots** - Füge Screenshots und Console-Logs bei
 4. **Browser-Info** - Gib Browser und Version an
+
+---
+
+## 🚀 v1.1 Release
+
+**Habit Tracker Pro v1.1 ist jetzt verfügbar!** 🎉
+
+### 📦 Installation
+
+```bash
+# Klonen und installieren
+git clone https://github.com/z7Vitrexx/habit-tracker.git
+cd habit-tracker
+npm install --legacy-peer-deps
+
+# Entwicklung starten
+npm run dev
+
+# Production Build für PWA-Installation
+npm run build
+npx serve dist -l 4173
+```
+
+### 🎯 Was ist neu?
+
+- **📱 Mobile-UX komplett überarbeitet** – Bessere Touch-Bedienung und responsive Layouts
+- **🎯 Onboarding mit Templates** – Schneller Start mit vorgefertigten Gewohnheiten
+- **📊 Statistik verständlicher gemacht** – Aktuelle Wochen-Übersicht und mobile Charts
+- **📤 Vertrauenswürdige Daten-UX** – Klare Backup/Import-Dialoge mit Erfolgsmeldungen
+- **🔔 Ehrliche Reminder-UX** – Klare Übersicht aller Erinnerungen und Browser-Grenzen
+- **⚡ Performance & Stabilität** – Lazy Loading, Error Boundaries, optimierte Bundle-Größe
+
+[📋 Vollständige Release Notes](RELEASE_NOTES_v1.1.md)
 
 ---
 
