@@ -231,7 +231,11 @@ export function createDemoSeed(): DemoSeedData {
 
 export function shouldSeedDemo(): boolean {
   // Check if demo mode is enabled
-  if (import.meta.env.VITE_DEMO_MODE !== 'true') {
+  const demoModeEnabled = import.meta.env.VITE_DEMO_MODE === 'true'
+  console.log('Demo mode check:', { demoModeEnabled, envValue: import.meta.env.VITE_DEMO_MODE })
+  
+  if (!demoModeEnabled) {
+    console.log('Demo mode disabled - skipping seed')
     return false
   }
 
@@ -239,12 +243,21 @@ export function shouldSeedDemo(): boolean {
   try {
     const existingData = localStorage.getItem('habit-tracker-data')
     const existingProfiles = localStorage.getItem('habit-tracker-profiles')
+    const currentProfile = localStorage.getItem('habit-tracker-current-profile')
     
-    // If there's any existing data, don't seed
-    if (existingData || existingProfiles) {
+    console.log('Existing data check:', { 
+      hasData: !!existingData, 
+      hasProfiles: !!existingProfiles, 
+      hasCurrentProfile: !!currentProfile 
+    })
+    
+    // More thorough check - only seed if there's truly no meaningful data
+    if (existingData || existingProfiles || currentProfile) {
+      console.log('Existing data found - skipping demo seed')
       return false
     }
     
+    console.log('No existing data found - proceeding with demo seed')
     return true
   } catch (error) {
     console.warn('Error checking for existing data:', error)
@@ -253,19 +266,25 @@ export function shouldSeedDemo(): boolean {
 }
 
 export async function seedDemoData(): Promise<void> {
+  console.log('seedDemoData called')
+  
   if (!shouldSeedDemo()) {
+    console.log('Demo seed conditions not met - exiting')
     return
   }
 
   try {
+    console.log('Creating demo data...')
     const demoData = createDemoSeed()
     
+    console.log('Saving demo profile...')
     // Save demo profile
     const profiles = {
       [demoData.profile.id]: demoData.profile
     }
     localStorage.setItem('habit-tracker-profiles', JSON.stringify(profiles))
     
+    console.log('Saving demo data with habits and check-ins...')
     // Save demo data
     const data: ProfileData = {
       habits: demoData.habits,
@@ -288,11 +307,16 @@ export async function seedDemoData(): Promise<void> {
     }
     localStorage.setItem('habit-tracker-data', JSON.stringify(data))
     
+    console.log('Setting current profile...')
     // Set current profile
     localStorage.setItem('habit-tracker-current-profile', demoData.profile.id)
     
-    console.log('Demo data seeded successfully')
+    console.log('✅ Demo data seeded successfully', {
+      profileId: demoData.profile.id,
+      habitsCount: demoData.habits.length,
+      checkInsCount: demoData.checkIns.length
+    })
   } catch (error) {
-    console.error('Error seeding demo data:', error)
+    console.error('❌ Error seeding demo data:', error)
   }
 }

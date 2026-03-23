@@ -105,6 +105,7 @@ function AppContent() {
 function App() {
   // Seed demo data on app startup if needed
   useEffect(() => {
+    console.log('App mounted - checking demo seed conditions')
     seedDemoData()
   }, [])
 
