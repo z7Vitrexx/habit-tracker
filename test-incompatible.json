@@ -1,0 +1,15 @@
+{
+  "version": "1.0",
+  "exportedAt": "2026-03-23T10:00:00.000Z",
+  "profile": {
+    "name": "TestProfil",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  "data": {
+    "habits": [
+      {
+        "id": "habit-1"
+      }
+    ]
+  }
+}

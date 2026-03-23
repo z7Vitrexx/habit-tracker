@@ -1,0 +1,61 @@
+{
+  "version": "1.0",
+  "exportedAt": "2026-03-23T10:00:00.000Z",
+  "profile": {
+    "name": "TestProfil",
+    "createdAt": "2026-01-01T00:00:00.000Z"
+  },
+  "data": {
+    "habits": [
+      {
+        "id": "habit-1",
+        "name": "Sport",
+        "description": "Täglich 30 Minuten Sport",
+        "color": "#3b82f6",
+        "icon": "🏃",
+        "category": "Gesundheit",
+        "startDate": "2026-01-01",
+        "status": "active",
+        "type": "binary",
+        "frequency": {
+          "type": "daily"
+        },
+        "createdAt": "2026-01-01T00:00:00.000Z",
+        "updatedAt": "2026-01-01T00:00:00.000Z"
+      }
+    ],
+    "checkIns": [
+      {
+        "id": "checkin-1",
+        "habitId": "habit-1",
+        "date": "2026-03-23",
+        "status": "done",
+        "note": "Super Training!",
+        "createdAt": "2026-03-23T10:00:00.000Z",
+        "updatedAt": "2026-03-23T10:00:00.000Z"
+      }
+    ],
+    "categories": [
+      {
+        "id": "cat-1",
+        "name": "Gesundheit",
+        "color": "#10b981",
+        "createdAt": "2026-01-01T00:00:00.000Z"
+      }
+    ],
+    "settings": {
+      "weekStart": "monday",
+      "theme": "system",
+      "autoLockMinutes": 30,
+      "notifications": true
+    },
+    "reminders": [
+      {
+        "id": "reminder-1",
+        "habitId": "habit-1",
+        "time": "08:00",
+        "enabled": true
+      }
+    ]
+  }
+}
