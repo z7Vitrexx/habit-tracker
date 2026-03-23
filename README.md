@@ -65,11 +65,17 @@ Diese App verwendet **echten lokalen Passwortschutz**:
 
 ## 🚀 Schnellstart
 
-### Installation
+### Voraussetzungen
+
+- **Node.js** Version 18+ (empfohlen: 20+)
+- **npm** Version 9+ (oder yarn/pnpm)
+- **Moderner Browser** (Chrome 90+, Firefox 88+, Safari 14+, Edge 90+)
+
+### Lokale Installation
 
 ```bash
 # 1. Repository klonen
-git clone <repository-url>
+git clone https://github.com/z7Vitrexx/habit-tracker.git
 cd habit-tracker
 
 # 2. Abhängigkeiten installieren
@@ -77,13 +83,39 @@ npm install --legacy-peer-deps
 
 # 3. Entwicklungsserver starten
 npm run dev
+# App läuft auf: http://localhost:5173
+```
 
-# 4. Build für Produktion
+### Lokales Starten
+
+```bash
+# Entwicklung (mit Hot-Reload)
+npm run dev
+
+# Production Build
 npm run build
 
-# 5. Preview starten
+# Production Preview (PWA-fähig)
 npm run preview
+# App läuft auf: http://localhost:4173
 ```
+
+### Wichtige Hinweise für lokale Nutzung
+
+**🔒 Lokale Datenspeicherung**
+- Alle Daten werden ausschließlich im Browser gespeichert (IndexedDB)
+- Kein Cloud-Sync, keine Server-Verbindung
+- Daten sind profil- und browserspezifisch
+
+**📱 PWA-Installation**
+- Für PWA-Installation muss Production Build verwendet werden
+- `npm run build && npm run preview`
+- Dann http://localhost:4173 im Browser öffnen
+
+**🔔 Browser-Benachrichtigungen**
+- Erinnerungen funktionieren nur im aktiven Browser
+- Benachrichtigungen müssen im Browser erlaubt werden
+- Keine systemweiten Push-Benachrichtigungen wie native Apps
 
 ### Erste Schritte
 
@@ -147,16 +179,32 @@ npx serve dist -l 4173
 
 💡 **Tipp:** Die App zeigt ehrliche Hinweise zu diesen Grenzen in den Einstellungen.
 
-## 📤 Import/Export
+## 📤 Daten-Backup & Import/Export
 
-### Warum brauchst du Import/Export?
+### Warum brauchst du Backups?
 
 Da alles lokal gespeichert wird, musst du deine Daten selbst sichern:
 
 - **🔄 Gerätewechsel** - Daten vom alten auf neues Gerät übertragen
-- **💾 Backup** - Regelmäßige Sicherung deiner Fortschritte
+- **💾 Regelmäßiges Backup** - Wöchentliche Sicherung deiner Fortschritte
 - **📱 Plattformwechsel** - Von Desktop zu Mobile oder umgekehrt
 - **🔒 Notfall** - Bei Problemen mit dem lokalen Speicher
+
+### Backup erstellen
+
+1. **Einstellungen → Datenverwaltung → Backup erstellen**
+2. Wähle "Backup herunterladen"
+3. Speichere die JSON-Datei sicher (Cloud, USB-Stick, etc.)
+4. **Tipp:** Erstelle regelmäßig Backups (z.B. wöchentlich)
+
+### Backup wiederherstellen
+
+1. **Einstellungen → Datenverwaltung → Backup wiederherstellen**
+2. Wähle deine Backup-Datei aus
+3. Prüfe die Vorschau (Profilname, Exportdatum)
+4. Bestätige die Wiederherstellung
+
+⚠️ **Wichtig:** Beim Wiederherstellen werden alle aktuellen Daten ersetzt!
 
 ### Export Format
 
@@ -336,9 +384,11 @@ Falls die PWA nicht installierbar ist:
 
 Bei Passwort-Problemen:
 
-1. **Browser-Kompatibilität** - Web Crypto API wird benötigt
-2. **Passwort-Stärke** - Verwende sichere Passwörter
-3. **localStorage** - Beschädigte Daten können Probleme verursachen
+1. **Browser-Kompatibilität** - Web Crypto API wird benötigt (Chrome 90+, Firefox 88+, Safari 14+)
+2. **Passwort-Stärke** - Verwende sichere Passwörter (mindestens 8 Zeichen)
+3. **Daten beschädigt** - Bei Problemen: Profil löschen und Backup wiederherstellen
+
+⚠️ **Wichtig:** Bei Passwortverlust sind Daten nicht wiederherstellbar!
 
 ### Erinnerungsprobleme
 
@@ -347,12 +397,80 @@ Bei nicht funktionierenden Erinnerungen:
 1. **Permission prüfen** - Browser-Benachrichtigungen müssen erlaubt sein
 2. **Browser aktiv** - Erinnerungen funktionieren nur im aktiven Browser
 3. **System-Einstellungen** - Betriebssystem kann Benachrichtigungen blockieren
+4. **Testen** - Einstellungen → Reminder-Übersicht → "Testbenachrichtigung"
+
+### Datenprobleme
+
+Bei Problemen mit lokalen Daten:
+
+1. **Browser-Cache leeren** - Kann bei beschädigten Daten helfen
+2. **Profil neu erstellen** - Bei schweren Problemen mit neuem Profil starten
+3. **Backup wiederherstellen** - Letztes Backup aus Sicherheitsgründen wiederherstellen
+4. **Browser-Wechsel** - Daten sind browserspezifisch
+
+### PWA-/Cache-Probleme
+
+Bei PWA-Problemen:
+
+1. **Cache leeren** - Browser-Cache und Application Storage leeren
+2. **Service Worker aktualisieren** - Seite neu laden oder PWA neu installieren
+3. **Production Build** - PWA-Installation nur mit `npm run build && npm run preview`
+
+## 🌐 Öffentliches Deployment
+
+### Vercel (empfohlen)
+
+1. **GitHub Repository verbinden**
+   - Vercel Dashboard → "New Project"
+   - GitHub Repository auswählen
+   - Framework Preset: "React"
+
+2. **Build-Einstellungen**
+   - **Build Command:** `npm run build`
+   - **Output Directory:** `dist`
+   - **Install Command:** `npm install --legacy-peer-deps`
+
+3. **Environment Variablen**
+   - Keine erforderlich (App läuft vollständig lokal)
+
+4. **Deployen**
+   - "Deploy" klicken
+   - Fertig! App läuft unter `*.vercel.app`
+
+### Netlify
+
+1. **GitHub Repository verbinden**
+   - Netlify Dashboard → "Add new site"
+   - GitHub Repository auswählen
+
+2. **Build-Einstellungen**
+   - **Build command:** `npm run build`
+   - **Publish directory:** `dist`
+   - **Build command:** `npm install --legacy-peer-deps && npm run build`
+
+3. **Deployen**
+   - "Deploy site" klicken
+   - Fertig!
+
+### Wichtige Hinweise für Deployment
+
+**🔒 Keine Environment Variablen nötig**
+- Die App benötigt keine API-Keys oder Secrets
+- Alle Daten werden lokal im Browser gespeichert
+
+**📱 PWA-Unterstützung**
+- Auf Vercel/Netlify funktioniert die PWA-Installation automatisch
+- HTTPS wird automatisch bereitgestellt
+
+**⚡ Performance**
+- Lazy Loading ist bereits konfiguriert
+- Bundle-Größe ist optimiert (~680KB)
 
 ## 📞 Support
 
 Bei Problemen oder Fragen:
 
-1. **Issues prüfen** - [GitHub Issues](../../issues) für bekannte Probleme
+1. **Issues prüfen** - [GitHub Issues](https://github.com/z7Vitrexx/habit-tracker/issues) für bekannte Probleme
 2. **Neues Issue** - Erstelle ein Issue mit detaillierter Beschreibung
 3. **Screenshots** - Füge Screenshots und Console-Logs bei
 4. **Browser-Info** - Gib Browser und Version an
