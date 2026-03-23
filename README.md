@@ -81,23 +81,36 @@ npm run preview
 
 ## 📱 PWA Installation
 
+### ⚠️ Wichtiger Hinweis (v1.1)
+
+**PWA-Installation funktioniert nur mit dem Production Build!**
+
+```bash
+# Production Build starten
+npm run build
+npx serve dist -l 4173
+# Dann: http://localhost:4173 aufrufen
+```
+
+**Im Dev-Modus (`npm run dev`) erscheint kein Install-Button** (normales PWA-Verhalten).
+
 ### Desktop (Chrome/Edge/Brave)
 
-1. **App öffnen:** `http://localhost:5173`
-2. **Installations-Symbol suchen:** 📱 in der Adressleiste
-3. **Installieren:** Klick auf "Installieren"
+1. **Production Build öffnen:** `http://localhost:4173`
+2. **Install-Button suchen:** In App (Header) oder Browser-Adressleiste
+3. **Installieren:** Klick auf "Installieren" oder Browser-Symbol
 4. **Ergebnis:** App öffnet sich in eigenem Fenster ohne Browser-Leiste
 
 ### Mobile (Android)
 
-1. **Chrome öffnen:** `http://localhost:5173`
+1. **Production Build öffnen:** `http://localhost:4173` in Chrome
 2. **Install-Prompt warten:** Unten erscheint "App installieren"
 3. **Installieren:** Klick auf "Installieren"
 4. **Ergebnis:** App-Icon erscheint auf Homescreen
 
 ### iOS (iPhone/iPad)
 
-1. **Safari öffnen:** `http://localhost:5173`
+1. **Production Build öffnen:** `http://localhost:4173` in Safari
 2. **Teilen-Button:** ⚡️ unten in Safari
 3. **"Zum Home-Bildschirm hinzufügen"**
 4. **Hinzufügen:** Bestätigen
@@ -299,10 +312,12 @@ npm install --legacy-peer-deps
 
 Falls die PWA nicht installierbar ist:
 
-1. **HTTPS prüfen** - Im Development ist localhost ausgenommen
-2. **Service Worker** - Muss korrekt registriert sein
-3. **Manifest** - Muss valide sein
-4. **Browser-Cache** - Cache leeren und neu laden
+1. **Production Build verwenden** - `npm run build && npx serve dist`
+2. **HTTPS prüfen** - Im Development ist localhost ausgenommen
+3. **Service Worker** - Muss korrekt registriert sein (nur in Production)
+4. **Manifest prüfen** - Muss valide sein und PNG-Icons enthalten
+5. **Browser-Cache** - Cache leeren und neu laden
+6. **Console prüfen** - `[PWA] beforeinstallprompt received` muss erscheinen
 
 ### Verschlüsselungsprobleme
 
