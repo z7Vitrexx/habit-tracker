@@ -1,18 +1,20 @@
-import { useState } from 'react'
+import { useState, Suspense, lazy } from 'react'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { ProfileSelection } from './components/ProfileSelection'
 import { AppLayout } from './components/AppLayout'
 import { Dashboard } from './components/Dashboard'
 import { Habits } from './components/Habits'
-import { Statistics } from './components/Statistics'
-import { History } from './components/History'
-import { Settings } from './components/Settings'
 import { PWAInstallPrompt } from './components/PWAInstallPrompt'
 import { PWAUpdatePrompt } from './components/PWAUpdatePrompt'
 import { OfflineStatus } from './components/OfflineStatus'
 import { AuthProvider } from './contexts/AuthContext'
 import { ReminderProvider } from './contexts/ReminderContext'
 import { useAuth } from './hooks/useAuth'
+
+// Lazy load heavy components
+const Statistics = lazy(() => import('./components/Statistics'))
+const History = lazy(() => import('./components/History'))
+const Settings = lazy(() => import('./components/Settings'))
 
 type ViewType = 'dashboard' | 'habits' | 'stats' | 'history' | 'settings'
 
@@ -32,11 +34,35 @@ function AppContent() {
       case 'habits':
         return <Habits />
       case 'stats':
-        return <Statistics />
+        return (
+          <Suspense fallback={
+            <div className="flex items-center justify-center py-8">
+              <div className="text-muted-foreground">Lade Statistiken...</div>
+            </div>
+          }>
+            <Statistics />
+          </Suspense>
+        )
       case 'history':
-        return <History />
+        return (
+          <Suspense fallback={
+            <div className="flex items-center justify-center py-8">
+              <div className="text-muted-foreground">Lade Verlauf...</div>
+            </div>
+          }>
+            <History />
+          </Suspense>
+        )
       case 'settings':
-        return <Settings />
+        return (
+          <Suspense fallback={
+            <div className="flex items-center justify-center py-8">
+              <div className="text-muted-foreground">Lade Einstellungen...</div>
+            </div>
+          }>
+            <Settings />
+          </Suspense>
+        )
       default:
         return <Dashboard />
     }

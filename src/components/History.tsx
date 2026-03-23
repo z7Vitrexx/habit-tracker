@@ -20,7 +20,7 @@ export function History() {
   const [editingCheckIn, setEditingCheckIn] = useState<CheckIn | null>(null)
   const [editNote, setEditNote] = useState('')
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'))
-  const [filterStatus, setFilterStatus] = useState<CheckInStatus | 'all'>('all')
+  const [filterStatus, setFilterStatus] = useState<CheckInStatus | 'all' | 'hasNote' | 'missedOnly' | 'skippedOnly'>('all')
   const [timeFilter, setTimeFilter] = useState<'all' | '7days' | '30days' | '90days'>('30days')
 
   const activeHabits = useMemo(() => profileData?.habits.filter(h => h.status === 'active') || [], [profileData])
@@ -104,8 +104,14 @@ export function History() {
     
     let checkIns = getCheckInsForHabit(selectedHabit.id)
     
-    // Status filter
-    if (filterStatus !== 'all') {
+    // Enhanced status filters
+    if (filterStatus === 'hasNote') {
+      checkIns = checkIns.filter(ci => ci.note && ci.note.trim() !== '')
+    } else if (filterStatus === 'missedOnly') {
+      checkIns = checkIns.filter(ci => ci.status === 'missed')
+    } else if (filterStatus === 'skippedOnly') {
+      checkIns = checkIns.filter(ci => ci.status === 'skipped')
+    } else if (filterStatus !== 'all') {
       checkIns = checkIns.filter(ci => ci.status === filterStatus)
     }
     
@@ -123,6 +129,37 @@ export function History() {
     
     return checkIns.sort((a, b) => b.date.localeCompare(a.date))
   }, [selectedHabit, filterStatus, timeFilter, getCheckInsForHabit])
+
+  // Group check-ins by date for better orientation
+  const getGroupedCheckIns = useMemo(() => {
+    const filtered = getFilteredCheckIns
+    const groups: { [key: string]: typeof filtered } = {}
+    
+    filtered.forEach(checkIn => {
+      const date = new Date(checkIn.date)
+      const today = new Date()
+      const yesterday = subDays(today, 1)
+      const weekStart = subDays(today, today.getDay() === 0 ? 6 : today.getDay() - 1)
+      
+      let groupKey = ''
+      if (isSameDay(date, today)) {
+        groupKey = 'Heute'
+      } else if (isSameDay(date, yesterday)) {
+        groupKey = 'Gestern'
+      } else if (date >= weekStart) {
+        groupKey = 'Diese Woche'
+      } else {
+        groupKey = format(date, 'MMMM yyyy', { locale: de })
+      }
+      
+      if (!groups[groupKey]) {
+        groups[groupKey] = []
+      }
+      groups[groupKey].push(checkIn)
+    })
+    
+    return groups
+  }, [getFilteredCheckIns])
 
   const getHabitsForSelectedDate = () => {
     return getHabitsForDate(selectedDate)
@@ -192,13 +229,16 @@ export function History() {
             
             <select
               value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value as CheckInStatus | 'all')}
+              onChange={(e) => setFilterStatus(e.target.value as CheckInStatus | 'all' | 'hasNote' | 'missedOnly' | 'skippedOnly')}
               className="px-3 py-1 border rounded text-sm"
             >
               <option value="all">Alle Status</option>
               <option value="done">Erledigt</option>
               <option value="missed">Verpasst</option>
               <option value="skipped">Übersprungen</option>
+              <option value="hasNote">Mit Notiz</option>
+              <option value="missedOnly">Nur verpasste</option>
+              <option value="skippedOnly">Nur übersprungene</option>
             </select>
             
             <select
@@ -282,55 +322,72 @@ export function History() {
           <CardContent>
             {getFilteredCheckIns.length === 0 ? (
               <div className="text-center py-8">
+                <Target className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                <h3 className="text-lg font-semibold mb-2">Keine Einträge gefunden</h3>
                 <p className="text-muted-foreground">
-                  {timeFilter === 'all' 
+                  {filterStatus === 'hasNote' 
+                    ? 'Keine Einträge mit Notizen vorhanden'
+                    : filterStatus === 'missedOnly'
+                    ? 'Keine verpassten Einträge vorhanden'
+                    : filterStatus === 'skippedOnly'
+                    ? 'Keine übersprungenen Einträge vorhanden'
+                    : timeFilter === 'all' 
                     ? 'Keine Einträge für diesen Habit vorhanden'
                     : `Keine Einträge im gewählten Zeitraum (${timeFilter === '7days' ? 'letzte 7 Tage' : timeFilter === '30days' ? 'letzte 30 Tage' : 'letzte 90 Tage'})`
                   }
                 </p>
               </div>
             ) : (
-              <div className="space-y-2">
-                {getFilteredCheckIns.map((checkIn: CheckIn) => (
-                  <div
-                    key={checkIn.id}
-                    className="flex items-center justify-between p-3 border rounded-lg"
-                  >
-                    <div className="flex items-center space-x-3">
-                      {getStatusBadge(checkIn.status)}
-                      <div>
-                        <div className="font-medium">
-                          {format(new Date(checkIn.date), 'EEEE, d. MMMM yyyy', { locale: de })}
+              <div className="space-y-6">
+                {Object.entries(getGroupedCheckIns).map(([groupName, checkIns]) => (
+                  <div key={groupName}>
+                    <h3 className="text-lg font-semibold text-muted-foreground mb-3 sticky top-0 bg-background pb-2 border-b">
+                      {groupName}
+                    </h3>
+                    <div className="space-y-2">
+                      {checkIns.map((checkIn: CheckIn) => (
+                        <div
+                          key={checkIn.id}
+                          className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors"
+                        >
+                          <div className="flex items-center space-x-3 flex-1">
+                            {getStatusBadge(checkIn.status)}
+                            <div className="flex-1 min-w-0">
+                              <div className="font-medium">
+                                {format(new Date(checkIn.date), 'EEEE, d. MMMM', { locale: de })}
+                              </div>
+                              <div className="flex items-center space-x-3 text-sm text-muted-foreground">
+                                {checkIn.value && (
+                                  <span className="font-medium">Wert: {checkIn.value}</span>
+                                )}
+                                {checkIn.note && (
+                                  <span className="italic truncate max-w-xs">Notiz: {checkIn.note}</span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div className="flex space-x-1">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                setEditingCheckIn(checkIn)
+                                setEditNote(checkIn.note || '')
+                              }}
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleDeleteCheckIn(checkIn.id)}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
                         </div>
-                        <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                          {checkIn.value && (
-                            <span className="font-medium">Wert: {checkIn.value}</span>
-                          )}
-                          {checkIn.note && (
-                            <span className="italic">Notiz: {checkIn.note}</span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="flex space-x-1">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          setEditingCheckIn(checkIn)
-                          setEditNote(checkIn.note || '')
-                        }}
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleDeleteCheckIn(checkIn.id)}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                      ))}
                     </div>
                   </div>
                 ))}
@@ -434,92 +491,121 @@ export function History() {
           <CardContent>
             {getHabitsForSelectedDate().length === 0 ? (
               <div className="text-center py-8">
+                <Target className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                <h3 className="text-lg font-semibold mb-2">Keine Habits geplant</h3>
                 <p className="text-muted-foreground">
-                  Keine Habits für diesen Tag geplant
+                  Für diesen Tag sind keine Habits geplant oder verfügbar.
                 </p>
               </div>
             ) : (
-              <div className="grid gap-4">
-                {getHabitsForSelectedDate().map(habit => {
-                  const checkIn = getCheckInsForSelectedDate().find(ci => ci.habitId === habit.id)
-                  
-                  return (
-                    <Card key={habit.id}>
-                      <CardContent className="pt-6">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-4 flex-1">
-                            <div
-                              className="w-10 h-10 rounded-full border-2 border-white shadow-sm flex items-center justify-center"
-                              style={{ backgroundColor: habit.color }}
-                            >
-                              {habit.icon ? (
-                                <span className="text-white text-lg">{habit.icon}</span>
-                              ) : (
-                                <Target className="w-5 h-5 text-white" />
-                              )}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center space-x-2">
-                                <h3 className="font-medium">{habit.name}</h3>
-                                {habit.type === 'quantitative' && (
-                                  <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
-                                    Quantitativ
-                                  </span>
-                                )}
-                                {checkIn && (
-                                  <span className={`text-xs px-2 py-1 rounded-full ${
-                                    checkIn.status === 'done' ? 'bg-green-100 text-green-800' :
-                                    checkIn.status === 'missed' ? 'bg-red-100 text-red-800' :
-                                    'bg-yellow-100 text-yellow-800'
-                                  }`}>
-                                    {checkIn.status === 'done' ? 'Erledigt' :
-                                     checkIn.status === 'missed' ? 'Verpasst' : 'Übersprungen'}
-                                  </span>
+              <>
+                {/* Day Summary */}
+                <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <h4 className="font-medium text-blue-800 mb-2">Tagesübersicht</h4>
+                  <div className="grid grid-cols-3 gap-4 text-center">
+                    <div>
+                      <div className="text-lg font-bold text-green-600">
+                        {getCheckInsForSelectedDate().filter(ci => ci.status === 'done').length}
+                      </div>
+                      <div className="text-xs text-muted-foreground">Erledigt</div>
+                    </div>
+                    <div>
+                      <div className="text-lg font-bold text-red-600">
+                        {getCheckInsForSelectedDate().filter(ci => ci.status === 'missed').length}
+                      </div>
+                      <div className="text-xs text-muted-foreground">Verpasst</div>
+                    </div>
+                    <div>
+                      <div className="text-lg font-bold text-yellow-600">
+                        {getCheckInsForSelectedDate().filter(ci => ci.status === 'skipped').length}
+                      </div>
+                      <div className="text-xs text-muted-foreground">Übersprungen</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Habits List */}
+                <div className="grid gap-4">
+                  {getHabitsForSelectedDate().map(habit => {
+                    const checkIn = getCheckInsForSelectedDate().find(ci => ci.habitId === habit.id)
+                    
+                    return (
+                      <Card key={habit.id}>
+                        <CardContent className="pt-6">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-4 flex-1">
+                              <div
+                                className="w-10 h-10 rounded-full border-2 border-white shadow-sm flex items-center justify-center"
+                                style={{ backgroundColor: habit.color }}
+                              >
+                                {habit.icon ? (
+                                  <span className="text-white text-lg">{habit.icon}</span>
+                                ) : (
+                                  <Target className="w-5 h-5 text-white" />
                                 )}
                               </div>
-                              {habit.description && (
-                                <p className="text-sm text-muted-foreground">{habit.description}</p>
-                              )}
-                              {checkIn && (
-                                <div className="mt-2 space-y-1">
-                                  {habit.type === 'quantitative' && checkIn.value && (
-                                    <p className="text-sm font-medium text-green-700">
-                                      Wert: {checkIn.value} {habit.frequency.targetValue && `/ ${habit.frequency.targetValue}`}
-                                    </p>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center space-x-2">
+                                  <h3 className="font-medium">{habit.name}</h3>
+                                  {habit.type === 'quantitative' && (
+                                    <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                                      Quantitativ
+                                    </span>
                                   )}
-                                  {checkIn.note && (
-                                    <p className="text-sm text-muted-foreground">Notiz: {checkIn.note}</p>
+                                  {checkIn && (
+                                    <span className={`text-xs px-2 py-1 rounded-full ${
+                                      checkIn.status === 'done' ? 'bg-green-100 text-green-800' :
+                                      checkIn.status === 'missed' ? 'bg-red-100 text-red-800' :
+                                      'bg-yellow-100 text-yellow-800'
+                                    }`}>
+                                      {checkIn.status === 'done' ? 'Erledigt' :
+                                       checkIn.status === 'missed' ? 'Verpasst' : 'Übersprungen'}
+                                    </span>
                                   )}
                                 </div>
-                              )}
+                                {habit.description && (
+                                  <p className="text-sm text-muted-foreground">{habit.description}</p>
+                                )}
+                                {checkIn && (
+                                  <div className="mt-2 space-y-1">
+                                    {habit.type === 'quantitative' && checkIn.value && (
+                                      <p className="text-sm font-medium text-green-700">
+                                        Wert: {checkIn.value} {habit.frequency.targetValue && `/ ${habit.frequency.targetValue}`}
+                                      </p>
+                                    )}
+                                    {checkIn.note && (
+                                      <p className="text-sm text-muted-foreground italic">Notiz: {checkIn.note}</p>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                        
-                        <div className="flex items-center space-x-2 mt-4">
-                          {checkIn ? (
-                            <>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => {
-                                  setEditingCheckIn(checkIn)
-                                  setEditNote(checkIn.note || '')
-                                }}
-                              >
-                                <Edit2 className="w-4 h-4 mr-1" />
-                                Bearbeiten
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleDeleteCheckIn(checkIn.id)}
-                              >
-                                <Trash2 className="w-4 h-4 mr-1" />
-                                Löschen
-                              </Button>
-                            </>
-                          ) : (
+                          
+                          <div className="flex items-center space-x-2 mt-4">
+                            {checkIn ? (
+                              <>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => {
+                                    setEditingCheckIn(checkIn)
+                                    setEditNote(checkIn.note || '')
+                                  }}
+                                >
+                                  <Edit2 className="w-4 h-4 mr-1" />
+                                  Bearbeiten
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleDeleteCheckIn(checkIn.id)}
+                                >
+                                  <Trash2 className="w-4 h-4 mr-1" />
+                                  Löschen
+                                </Button>
+                              </>
+                            ) : (
                             <>
                               <Button
                                 size="sm"
@@ -548,7 +634,8 @@ export function History() {
                     </Card>
                   )
                 })}
-              </div>
+                </div>
+              </>
             )}
           </CardContent>
         </Card>
@@ -593,3 +680,5 @@ export function History() {
     </div>
   )
 }
+
+export default History

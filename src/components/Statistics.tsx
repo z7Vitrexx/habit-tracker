@@ -121,54 +121,6 @@ export function Statistics() {
     return 'stable'
   }
 
-  const getChartData = (habit: Habit) => {
-    const days = parseInt(timeRange)
-    const data = []
-    
-    for (let i = days - 1; i >= 0; i--) {
-      const date = subDays(new Date(), i)
-      const dateStr = format(date, 'yyyy-MM-dd')
-      const checkIn = profileData?.checkIns.find(ci => ci.habitId === habit.id && ci.date === dateStr)
-      
-      data.push({
-        date: format(date, 'dd.MM'),
-        status: checkIn?.status || 'none',
-        value: checkIn?.value || 0
-      })
-    }
-    
-    return data
-  }
-
-  const getWeeklyHeatmap = (): any[] => {
-    if (!selectedHabit || !profileData) return []
-    
-    const data: any[] = []
-    const today = new Date()
-    
-    // Last 12 weeks
-    for (let week = 11; week >= 0; week--) {
-      const weekStart = startOfWeek(subDays(today, week * 7), { weekStartsOn: 1 })
-      const weekEnd = endOfWeek(weekStart, { weekStartsOn: 1 })
-      const weekDays = eachDayOfInterval({ start: weekStart, end: weekEnd })
-      
-      weekDays.forEach(day => {
-        const dateStr = format(day, 'yyyy-MM-dd')
-        const checkIn = profileData.checkIns.find(ci => ci.habitId === selectedHabit.id && ci.date === dateStr)
-        
-        data.push({
-          date: dateStr,
-          day: format(day, 'EEE'),
-          week: week,
-          status: checkIn?.status || 'none',
-          value: checkIn?.value || 0
-        })
-      })
-    }
-    
-    return data
-  }
-
   const getTrendData = () => {
     if (!selectedHabit) return []
 
@@ -201,19 +153,116 @@ export function Statistics() {
       const weekStart = startOfWeek(subDays(today, i * 7), { weekStartsOn: 1 })
       const weekEnd = endOfWeek(weekStart, { weekStartsOn: 1 })
       
+      // Calculate planned units for this week based on active habits and their frequencies
+      const plannedUnits = activeHabits.reduce((total, habit) => {
+        const weekDays = eachDayOfInterval({ start: weekStart, end: weekEnd })
+        const plannedDays = weekDays.filter(day => {
+          const dayOfWeek = day.getDay() === 0 ? 7 : day.getDay()
+          switch (habit.frequency.type) {
+            case 'daily': return true
+            case 'weekdays': return dayOfWeek >= 1 && dayOfWeek <= 5
+            case 'weekends': return dayOfWeek === 6 || dayOfWeek === 7
+            case 'custom': return habit.frequency.weekdays?.includes(dayOfWeek) || false
+            case 'x_per_week': return true // Will be handled separately
+            default: return false
+          }
+        }).length
+        
+        // For x_per_week, use the target count
+        if (habit.frequency.type === 'x_per_week') {
+          return total + (habit.frequency.xPerWeek || 1)
+        }
+        
+        return total + plannedDays
+      }, 0)
+      
       const weekCheckIns = profileData.checkIns.filter(ci => {
         const ciDate = new Date(ci.date)
         return ciDate >= weekStart && ciDate <= weekEnd && ci.status === 'done'
       })
 
+      const skippedCheckIns = profileData.checkIns.filter(ci => {
+        const ciDate = new Date(ci.date)
+        return ciDate >= weekStart && ciDate <= weekEnd && ci.status === 'skipped'
+      })
+
+      const missedCheckIns = profileData.checkIns.filter(ci => {
+        const ciDate = new Date(ci.date)
+        return ciDate >= weekStart && ciDate <= weekEnd && ci.status === 'missed'
+      })
+
       weeks.push({
         week: format(weekStart, 'dd.MM'),
         completed: weekCheckIns.length,
-        total: activeHabits.length * 7, // Simplified calculation
+        skipped: skippedCheckIns.length,
+        missed: missedCheckIns.length,
+        planned: plannedUnits,
+        completionRate: plannedUnits > 0 ? Math.round((weekCheckIns.length / plannedUnits) * 100) : 0
       })
     }
 
     return weeks
+  }
+
+  const getWeeklyInsight = () => {
+    if (!profileData || activeHabits.length === 0) return null
+    
+    const currentWeek = getWeeklyData()[0] // Most recent week
+    if (!currentWeek) return null
+    
+    const { completed, planned } = currentWeek
+    
+    if (planned === 0) {
+      return "Diese Woche sind keine geplanten Einheiten angesetzt."
+    }
+    
+    const completionRate = Math.round((completed / planned) * 100)
+    
+    if (completionRate >= 100) {
+      return `🎯 Perfekt! Du hast alle ${planned} geplanten Einheiten diese Woche geschafft.`
+    } else if (completionRate >= 80) {
+      return `👍 Sehr gut! Du hast ${completed} von ${planned} geplanten Einheiten geschafft (${completionRate}%).`
+    } else if (completionRate >= 60) {
+      return `📈 Gut unterwegs! ${completed} von ${planned} Einheiten geschafft (${completionRate}%).`
+    } else {
+      return `💪 Weitermachen! ${completed} von ${planned} Einheiten geschafft (${completionRate}%).`
+    }
+  }
+
+  const getHabitInsight = (habit: Habit) => {
+    const stats = getHabitStats(habit)
+    const { currentStreak, completionRate7, completionRate30 } = stats
+    
+    if (habit.type === 'quantitative') {
+      const avgValue = stats.quantitativeStats?.averageValue || 0
+      const targetValue = habit.frequency.targetValue || 0
+      
+      if (targetValue > 0) {
+        const achievementRate = Math.round((avgValue / targetValue) * 100)
+        if (achievementRate >= 100) {
+          return `🎯 Ziel übertroffen! Durchschnittlich ${avgValue} (Ziel: ${targetValue})`
+        } else if (achievementRate >= 80) {
+          return `📈 Fast da! Durchschnittlich ${avgValue} von ${targetValue} erreicht`
+        } else {
+          return `💪 Raum für Verbesserung: ${avgValue} von ${targetValue} im Durchschnitt`
+        }
+      } else {
+        return `📊 Durchschnittlich ${avgValue} pro Einheit`
+      }
+    } else {
+      // Binary habits
+      if (currentStreak >= 7) {
+        return `🔥 Super! Aktuelle Serie: ${currentStreak} Tage`
+      } else if (completionRate30 >= 80) {
+        return `👍 Sehr konsistent! ${completionRate30}% in den letzten 30 Tagen`
+      } else if (completionRate7 >= 80) {
+        return `📈 Gute Woche! ${completionRate7}% in den letzten 7 Tagen`
+      } else if (currentStreak > 0) {
+        return `💪 Dran bleiben! Aktuelle Serie: ${currentStreak} Tage`
+      } else {
+        return `🌱 Neue Serie starten!`
+      }
+    }
   }
 
   const getHeatmapData = () => {
@@ -240,14 +289,13 @@ export function Statistics() {
 
   const overallStats = getOverallStats
   const habitStats = selectedHabit ? getHabitStats(selectedHabit) : null
-  const chartData = selectedHabit ? getChartData(selectedHabit) : []
   const trendData = selectedHabit ? getTrendData() : []
   const weeklyData = getWeeklyData()
   const heatmapData = getHeatmapData()
-  const weeklyHeatmap = getWeeklyHeatmap()
 
-  // Use the variables to avoid lint warnings
-  console.log('Stats loaded:', { overallStats, habitStats, chartData, trendData, weeklyData, heatmapData, weeklyHeatmap })
+  // Memoize expensive calculations
+  const weeklyInsight = useMemo(() => getWeeklyInsight(), [weeklyData])
+  const habitInsight = useMemo(() => selectedHabit ? getHabitInsight(selectedHabit) : null, [selectedHabit, habitStats])
 
   if (activeHabits.length === 0) {
     return (
@@ -280,6 +328,49 @@ export function Statistics() {
           Analysiere deine Fortschritte und Trends
         </p>
       </div>
+
+      {/* Weekly Insight Card */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <Calendar className="w-5 h-5" />
+            <span>Wochen-Übersicht</span>
+          </CardTitle>
+          <CardDescription>
+            Deine Leistung in dieser Woche
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-sm text-blue-800 font-medium">
+                {weeklyInsight}
+              </p>
+            </div>
+            
+            <div className="grid grid-cols-3 gap-4 text-center">
+              <div>
+                <div className="text-2xl font-bold text-green-600">
+                  {getWeeklyData()[0]?.completed || 0}
+                </div>
+                <div className="text-xs text-muted-foreground">Geschafft</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-blue-600">
+                  {getWeeklyData()[0]?.planned || 0}
+                </div>
+                <div className="text-xs text-muted-foreground">Geplant</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-orange-600">
+                  {getWeeklyData()[0]?.completionRate || 0}%
+                </div>
+                <div className="text-xs text-muted-foreground">Quote</div>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Overview Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -374,35 +465,89 @@ export function Statistics() {
         {selectedHabit && (
           <Card className="lg:col-span-2">
             <CardHeader>
-              <CardTitle>{selectedHabit.name} - Details</CardTitle>
+              <CardTitle className="flex items-center justify-between">
+                <span>{selectedHabit.name} - Details</span>
+                <div className="flex items-center space-x-2">
+                  <div
+                    className="w-4 h-4 rounded-full"
+                    style={{ backgroundColor: selectedHabit.color }}
+                  />
+                  <span className="text-sm text-muted-foreground">
+                    {selectedHabit.type === 'quantitative' ? 'Quantitativ' : 'Binär'}
+                  </span>
+                </div>
+              </CardTitle>
             </CardHeader>
             <CardContent>
+              {/* Habit Insight Card */}
+              <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+                <p className="text-sm text-green-800 font-medium">
+                  {habitInsight}
+                </p>
+              </div>
+
+              {/* Stats Grid */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                 <div className="text-center">
                   <div className="text-2xl font-bold text-green-600">
                     {getCurrentStreak(selectedHabit.id)}
                   </div>
-                  <div className="text-sm text-muted-foreground">Aktuelle Streak</div>
+                  <div className="text-sm text-muted-foreground">Aktuelle Serie</div>
                 </div>
                 <div className="text-center">
                   <div className="text-2xl font-bold text-blue-600">
                     {getLongestStreak(selectedHabit.id)}
                   </div>
-                  <div className="text-sm text-muted-foreground">Längste Streak</div>
+                  <div className="text-sm text-muted-foreground">Längste Serie</div>
                 </div>
                 <div className="text-center">
                   <div className="text-2xl font-bold text-purple-600">
                     {getCompletionRate(selectedHabit.id, 7)}%
                   </div>
-                  <div className="text-sm text-muted-foreground">7 Tage Rate</div>
+                  <div className="text-sm text-muted-foreground">Letzte 7 Tage</div>
                 </div>
                 <div className="text-center">
                   <div className="text-2xl font-bold text-orange-600">
                     {getCompletionRate(selectedHabit.id, 30)}%
                   </div>
-                  <div className="text-sm text-muted-foreground">30 Tage Rate</div>
+                  <div className="text-sm text-muted-foreground">Letzte 30 Tage</div>
                 </div>
               </div>
+
+              {/* Quantitative Stats */}
+              {selectedHabit.type === 'quantitative' && habitStats?.quantitativeStats && (
+                <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <h4 className="font-medium text-blue-800 mb-2">Quantitative Details</h4>
+                  <div className="grid grid-cols-3 gap-4 text-center">
+                    <div>
+                      <div className="text-lg font-bold text-blue-600">
+                        {habitStats.quantitativeStats.averageValue}
+                      </div>
+                      <div className="text-xs text-muted-foreground">Ø Wert</div>
+                    </div>
+                    <div>
+                      <div className="text-lg font-bold text-green-600">
+                        {habitStats.quantitativeStats.bestValue}
+                      </div>
+                      <div className="text-xs text-muted-foreground">Bester Wert</div>
+                    </div>
+                    <div>
+                      <div className="text-lg font-bold text-purple-600">
+                        {habitStats.quantitativeStats.totalValue}
+                      </div>
+                      <div className="text-xs text-muted-foreground">Gesamt</div>
+                    </div>
+                  </div>
+                  {selectedHabit.frequency.targetValue && (
+                    <div className="mt-2 text-center">
+                      <span className="text-sm text-blue-700">
+                        Ziel: {selectedHabit.frequency.targetValue} • 
+                        Erreicht: {Math.round((habitStats.quantitativeStats.averageValue / selectedHabit.frequency.targetValue) * 100)}%
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Trend Chart */}
               <div className="mb-6">
@@ -435,19 +580,56 @@ export function Statistics() {
         <CardHeader>
           <CardTitle>Wochenübersicht</CardTitle>
           <CardDescription>
-            Check-ins der letzten 8 Wochen
+            Deine Leistung in den letzten 8 Wochen
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={weeklyData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="week" />
-              <YAxis />
-              <Tooltip />
-              <Bar dataKey="completed" fill="#22c55e" />
-            </BarChart>
-          </ResponsiveContainer>
+          <div className="mb-4">
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={weeklyData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="week" />
+                <YAxis />
+                <Tooltip 
+                  formatter={(value: any, name: any) => {
+                    if (name === 'completed') return [`${value} erledigt`, 'Erledigt']
+                    if (name === 'planned') return [`${value} geplant`, 'Geplant']
+                    return [value, String(name)]
+                  }}
+                  labelFormatter={(label) => `Woche ${label}`}
+                />
+                <Bar dataKey="completed" fill="#22c55e" name="completed" />
+                <Bar dataKey="planned" fill="#3b82f6" name="planned" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+          
+          {/* Weekly Summary */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {weeklyData.slice(0, 3).map((week) => (
+              <div key={week.week} className="p-3 border rounded-lg">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium">Woche {week.week}</span>
+                  <span className="text-sm text-muted-foreground">
+                    {week.completionRate}%
+                  </span>
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {week.completed} von {week.planned} geplanten Einheiten geschafft
+                </div>
+                {week.skipped > 0 && (
+                  <div className="text-xs text-orange-600 mt-1">
+                    {week.skipped} übersprungen
+                  </div>
+                )}
+                {week.missed > 0 && (
+                  <div className="text-xs text-red-600 mt-1">
+                    {week.missed} verpasst
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
         </CardContent>
       </Card>
 
@@ -528,3 +710,5 @@ export function Statistics() {
     </div>
   )
 }
+
+export default Statistics

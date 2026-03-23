@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PWA Install Test</title>
+    <style>
+        body { font-family: system-ui; margin: 2rem; line-height: 1.6; }
+        .status { padding: 1rem; margin: 1rem 0; border-radius: 8px; }
+        .ok { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
+        pre { background: #f8f9fa; padding: 1rem; border-radius: 4px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>PWA Installierbarkeit Test</h1>
+    
+    <div id="results"></div>
+    
+    <script>
+        const results = document.getElementById('results');
+        
+        function addResult(title, status, details) {
+            const div = document.createElement('div');
+            div.className = `status ${status}`;
+            div.innerHTML = `<strong>${title}</strong><br>${details}`;
+            results.appendChild(div);
+        }
+        
+        // 1. Manifest prüfen
+        fetch('/manifest.webmanifest')
+            .then(response => {
+                if (response.ok) {
+                    return response.json();
+                }
+                throw new Error('Manifest nicht gefunden');
+            })
+            .then(manifest => {
+                addResult('Manifest', 'ok', `Gefunden: ${manifest.name}`);
+                console.log('Manifest:', manifest);
+                
+                // 2. Icons prüfen
+                const icons = manifest.icons || [];
+                const hasRequiredSizes = icons.some(icon => icon.sizes.includes('192')) && 
+                                         icons.some(icon => icon.sizes.includes('512'));
+                
+                if (hasRequiredSizes) {
+                    addResult('Icons', 'ok', `192x192 und 512x512 Icons vorhanden`);
+                } else {
+                    addResult('Icons', 'error', `Fehlende Icon-Größen`);
+                }
+                
+                // 3. Required fields prüfen
+                const requiredFields = ['name', 'short_name', 'start_url', 'display', 'icons'];
+                const missingFields = requiredFields.filter(field => !manifest[field]);
+                
+                if (missingFields.length === 0) {
+                    addResult('Manifest-Felder', 'ok', 'Alle required fields vorhanden');
+                } else {
+                    addResult('Manifest-Felder', 'error', `Fehlende Felder: ${missingFields.join(', ')}`);
+                }
+            })
+            .catch(error => {
+                addResult('Manifest', 'error', error.message);
+            });
+        
+        // 4. Service Worker prüfen
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js')
+                .then(registration => {
+                    addResult('Service Worker', 'ok', 'Registriert und aktiv');
+                    console.log('Service Worker:', registration);
+                })
+                .catch(error => {
+                    addResult('Service Worker', 'error', `Registrierung fehlgeschlagen: ${error.message}`);
+                });
+        } else {
+            addResult('Service Worker', 'error', 'Nicht unterstützt');
+        }
+        
+        // 5. Installierbarkeits-Kriterien prüfen
+        const criteria = [];
+        
+        if ('serviceWorker' in navigator) {
+            criteria.push('✅ Service Worker unterstützt');
+        } else {
+            criteria.push('❌ Service Worker nicht unterstützt');
+        }
+        
+        if (window.matchMedia('(display-mode: standalone)').matches) {
+            criteria.push('ℹ️ App bereits installiert (standalone mode)');
+        } else {
+            criteria.push('✅ App nicht installiert');
+        }
+        
+        if (navigator.onLine) {
+            criteria.push('✅ Online');
+        } else {
+            criteria.push('ℹ️ Offline');
+        }
+        
+        // 6. HTTPS prüfen
+        if (location.protocol === 'https:' || location.hostname === 'localhost') {
+            criteria.push('✅ Sicherer Kontext (HTTPS/localhost)');
+        } else {
+            criteria.push('❌ Kein sicherer Kontext');
+        }
+        
+        addResult('Installierbarkeits-Kriterien', 'info', criteria.join('<br>'));
+        
+        // 7. BeforeInstallPrompt Event prüfen
+        let deferredPrompt = null;
+        
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            addResult('Install Prompt Event', 'ok', 'Event empfangen - App sollte installierbar sein');
+        });
+        
+        setTimeout(() => {
+            if (!deferredPrompt) {
+                addResult('Install Prompt Event', 'info', 'Noch kein Event empfangen (normal bei bereits installierten Apps)');
+            }
+        }, 3000);
+        
+        // 8. User Agent Info
+        addResult('Browser Info', 'info', 
+            `User Agent: ${navigator.userAgent}<br>` +
+            `Platform: ${navigator.platform}<br>` +
+            `Standalone: ${window.matchMedia('(display-mode: standalone)').matches}`
+        );
+    </script>
+</body>
+</html>

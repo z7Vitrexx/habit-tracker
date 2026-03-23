@@ -97,41 +97,101 @@ export async function decryptProfileData(
   iv: string
 ): Promise<ProfileData> {
   try {
-    const saltBuffer = new ArrayBuffer(atob(salt).length)
-    new Uint8Array(saltBuffer).set(
-      atob(salt)
-        .split('')
-        .map(char => char.charCodeAt(0))
-    )
-    const ivBuffer = new ArrayBuffer(atob(iv).length)
-    new Uint8Array(ivBuffer).set(
-      atob(iv)
-        .split('')
-        .map(char => char.charCodeAt(0))
-    )
-    const encryptedBuffer = new Uint8Array(
-      atob(encryptedData)
-        .split('')
-        .map(char => char.charCodeAt(0))
-    ).buffer
+    // Validate inputs
+    if (!encryptedData || !password || !salt || !iv) {
+      throw new Error('Missing required decryption parameters')
+    }
 
-    const key = await deriveKey(password, saltBuffer)
+    // Decode salt from base64
+    let saltBuffer: ArrayBuffer
+    try {
+      saltBuffer = new ArrayBuffer(atob(salt).length)
+      new Uint8Array(saltBuffer).set(
+        atob(salt)
+          .split('')
+          .map(char => char.charCodeAt(0))
+      )
+    } catch (error) {
+      throw new Error('Invalid salt format')
+    }
 
-    const decryptedBuffer = await crypto.subtle.decrypt(
-      {
-        name: ENCRYPTION_ALGORITHM,
-        iv: ivBuffer,
-      },
-      key,
-      encryptedBuffer
-    )
+    // Decode iv from base64
+    let ivBuffer: ArrayBuffer
+    try {
+      ivBuffer = new ArrayBuffer(atob(iv).length)
+      new Uint8Array(ivBuffer).set(
+        atob(iv)
+          .split('')
+          .map(char => char.charCodeAt(0))
+      )
+    } catch (error) {
+      throw new Error('Invalid iv format')
+    }
 
-    const decoder = new TextDecoder()
-    const decryptedString = decoder.decode(decryptedBuffer)
-    return JSON.parse(decryptedString) as ProfileData
-  } catch {
-    console.error('Error generating salt')
-    throw new Error('Failed to generate salt')
+    // Decode encrypted data from base64
+    let encryptedBuffer: ArrayBuffer
+    try {
+      encryptedBuffer = new Uint8Array(
+        atob(encryptedData)
+          .split('')
+          .map(char => char.charCodeAt(0))
+      ).buffer
+    } catch (error) {
+      throw new Error('Invalid encrypted data format')
+    }
+
+    // Derive key
+    let key: CryptoKey
+    try {
+      key = await deriveKey(password, saltBuffer)
+    } catch (error) {
+      throw new Error('Failed to derive key from password')
+    }
+
+    // Decrypt data
+    let decryptedBuffer: ArrayBuffer
+    try {
+      decryptedBuffer = await crypto.subtle.decrypt(
+        {
+          name: 'AES-GCM',
+          iv: ivBuffer
+        },
+        key,
+        encryptedBuffer
+      )
+    } catch (error) {
+      throw new Error('Decryption failed - incorrect password or corrupted data')
+    }
+
+    // Decode and parse result
+    try {
+      const decoder = new TextDecoder()
+      const decryptedString = decoder.decode(decryptedBuffer)
+      const parsedData = JSON.parse(decryptedString)
+      
+      // Validate profile data structure
+      if (!parsedData || typeof parsedData !== 'object') {
+        throw new Error('Invalid profile data structure')
+      }
+      
+      return parsedData as ProfileData
+    } catch (error) {
+      if (error instanceof SyntaxError) {
+        throw new Error('Invalid JSON in decrypted data')
+      }
+      throw error
+    }
+  } catch (error) {
+    // Re-throw with more context if it's already a custom error
+    if (error instanceof Error && (error.message.includes('Invalid') || 
+        error.message.includes('Failed') || error.message.includes('Decryption failed'))) {
+      console.error('Profile decryption error:', error.message)
+      throw error
+    }
+    
+    // Generic fallback error
+    console.error('Unexpected decryption error:', error)
+    throw new Error('Failed to decrypt profile data')
   }
 }
 

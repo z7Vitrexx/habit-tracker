@@ -1,7 +1,7 @@
 import { createContext, useContext, type ReactNode, useState, useEffect } from 'react'
 import { db } from '../db'
 import type { ProfileMetadata, ProfileData } from '../types'
-import { encryptProfileData, decryptProfileData, verifyPassword } from '../lib/crypto'
+import { encryptProfileData, decryptProfileData } from '../lib/crypto'
 
 interface AuthContextType {
   profiles: ProfileMetadata[]
@@ -162,19 +162,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       setError(null)
       
-      const isValid = await verifyPassword(
-        profile.encryptedData,
-        password,
-        profile.salt,
-        profile.iv
-      )
-
-      if (!isValid) {
-        setError('Falsches Passwort')
+      // Validate profile metadata before decrypt
+      if (!profile.encryptedData || !profile.salt || !profile.iv) {
+        setError('Profildaten sind unvollständig')
         return false
       }
-
-      // Decrypt profile data
+      
+      // Decrypt profile data directly (verifyPassword would be redundant)
       const data = await decryptProfileData(
         profile.encryptedData,
         password,
@@ -188,8 +182,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setCurrentPassword(password)
       
       return true
-    } catch {
-      setError('Fehler beim Entsperren des Profils')
+    } catch (error) {
+      console.error('Profile unlock error:', error)
+      
+      // Handle specific error types
+      if (error instanceof Error) {
+        if (error.message.includes('incorrect password')) {
+          setError('Falsches Passwort')
+        } else if (error.message.includes('Invalid') || error.message.includes('format')) {
+          setError('Profildaten sind beschädigt')
+        } else if (error.message.includes('Missing required')) {
+          setError('Profildaten unvollständig')
+        } else if (error.message.includes('JSON')) {
+          setError('Profildaten können nicht gelesen werden')
+        } else {
+          setError('Fehler beim Entsperren des Profils')
+        }
+      } else {
+        setError('Fehler beim Entsperren des Profils')
+      }
+      
       return false
     }
   }

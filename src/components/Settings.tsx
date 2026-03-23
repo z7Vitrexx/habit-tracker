@@ -1,17 +1,24 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog'
-import { Lock, Download, Upload, Trash2, Shield, Cog, AlertTriangle, Bell } from 'lucide-react'
+import { Lock, Download, Upload, Trash2, Shield, Cog, AlertTriangle, Bell, Clock } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { useReminderContext } from '../contexts/ReminderContext'
+import { getIcon } from '../lib/iconMapping'
 import type { ProfileData } from '../types'
 import { ExportDataSchema } from '../types'
+import { format, isToday, isTomorrow } from 'date-fns'
+import { de } from 'date-fns/locale'
+import { usePWAInstall } from '../hooks/usePWAInstall'
 
 export function Settings() {
   const { currentProfile, profileData, saveProfileData, lockProfile } = useAuth()
   const { permission, isSupported, requestPermission, showNotification } = useReminderContext()
+  const { isInstallable, isInstalled, isInstalling, install, hasDeferredPrompt } = usePWAInstall()
+
+  console.log('Settings - PWA Install Status:', { isInstallable, isInstalled, isInstalling, hasDeferredPrompt })
   const [isExporting, setIsExporting] = useState<boolean>(false)
   const [isImporting, setIsImporting] = useState<boolean>(false)
   const [isDeleting, setIsDeleting] = useState<boolean>(false)
@@ -23,6 +30,58 @@ export function Settings() {
   const weekStart = profileData?.settings.weekStart || 'monday'
   const theme = profileData?.settings.theme || 'system'
   const notifications = profileData?.settings.notifications ?? true
+
+  // Calculate reminder overview
+  const reminderOverview = useMemo(() => {
+    if (!profileData) return []
+
+    const activeHabits = profileData.habits.filter(habit => 
+      habit.status === 'active' && 
+      habit.reminderEnabled && 
+      habit.reminderTime
+    )
+
+    return activeHabits.map(habit => {
+      const [hours, minutes] = habit.reminderTime!.split(':').map(Number)
+      const today = new Date()
+      const reminderDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), hours, minutes)
+      
+      // If reminder time has passed today, schedule for tomorrow
+      if (reminderDate < today) {
+        reminderDate.setDate(reminderDate.getDate() + 1)
+      }
+
+      // Format next reminder text
+      let nextReminderText = ''
+      if (isToday(reminderDate)) {
+        nextReminderText = `Heute um ${habit.reminderTime}`
+      } else if (isTomorrow(reminderDate)) {
+        nextReminderText = `Morgen um ${habit.reminderTime}`
+      } else {
+        nextReminderText = format(reminderDate, 'EEEE HH:mm', { locale: de })
+      }
+
+      // Check frequency
+      const frequencyText = (() => {
+        switch (habit.frequency.type) {
+          case 'daily': return 'Täglich'
+          case 'weekdays': return 'Werktags'
+          case 'weekends': return 'Wochenenden'
+          case 'custom': return `${habit.frequency.weekdays?.length || 0}x pro Woche`
+          case 'x_per_week': return `${habit.frequency.xPerWeek || 1}x pro Woche`
+          default: return 'Täglich'
+        }
+      })()
+
+      return {
+        habit,
+        nextReminderText,
+        frequencyText,
+        reminderTime: habit.reminderTime!,
+        nextReminderDate: reminderDate
+      }
+    }).sort((a, b) => a.nextReminderDate.getTime() - b.nextReminderDate.getTime())
+  }, [profileData])
 
   const handleExport = async () => {
     if (!profileData || !currentProfile) return
@@ -499,6 +558,178 @@ Möchtest du wirklich fortfahren?`
         </CardContent>
       </Card>
 
+      {/* Erinnerungen-Übersicht */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <Bell className="w-5 h-5" />
+            <span>Aktive Erinnerungen</span>
+          </CardTitle>
+          <CardDescription>
+            Übersicht aller eingerichteten Habit-Erinnerungen
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {reminderOverview.length === 0 ? (
+            <div className="text-center py-8">
+              <div className="w-12 h-12 bg-muted rounded-xl flex items-center justify-center mx-auto mb-4">
+                <Bell className="w-6 h-6 text-muted-foreground" />
+              </div>
+              <h3 className="text-lg font-semibold mb-2">Keine aktiven Erinnerungen</h3>
+              <p className="text-muted-foreground">
+                Du hast noch keine Erinnerungen für deine Gewohnheiten eingerichtet.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {reminderOverview.map(({ habit, nextReminderText, frequencyText, reminderTime }) => {
+                const IconComponent = getIcon(habit.icon)
+                return (
+                  <div key={habit.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors">
+                    <div className="flex items-center space-x-3">
+                      <div
+                        className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+                        style={{ backgroundColor: habit.color }}
+                      >
+                        <IconComponent className="w-5 h-5 text-white" />
+                      </div>
+                      <div>
+                        <h4 className="font-medium">{habit.name}</h4>
+                        <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                          <Clock className="w-3 h-3" />
+                          <span>{reminderTime}</span>
+                          <span>•</span>
+                          <span>{frequencyText}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-sm font-medium text-blue-600">{nextReminderText}</div>
+                      <div className="text-xs text-muted-foreground">Nächste Erinnerung</div>
+                    </div>
+                  </div>
+                )
+              })}
+              
+              <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-sm text-blue-800">
+                  <strong>Wichtiger Hinweis:</strong> Erinnerungen funktionieren nur, wenn die App im Browser geöffnet ist. 
+                  Die Benachrichtigungen sind zuverlässig, solange die App aktiv ist.
+                </p>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* PWA Installation */}
+      {isInstallable && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <Download className="w-5 h-5" />
+              <span>App installieren</span>
+            </CardTitle>
+            <CardDescription>
+              Installiere Habit Tracker Pro auf deinem Gerät für schnelleren Zugriff und Offline-Nutzung
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <h4 className="font-medium">Vorteile der Installation:</h4>
+                <ul className="text-sm text-muted-foreground space-y-1">
+                  <li>• Schneller Start von deinem Startbildschirm</li>
+                  <li>• Vollständige Offline-Funktionalität</li>
+                  <li>• Keine Browser-Leiste für mehr Platz</li>
+                  <li>• Bessere Integration mit dem Betriebssystem</li>
+                </ul>
+              </div>
+              <Button 
+                onClick={install} 
+                disabled={isInstalling}
+                className="w-full"
+              >
+                {isInstalling ? (
+                  <>
+                    <div className="w-4 h-4 mr-2 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                    Wird installiert...
+                  </>
+                ) : (
+                  <>
+                    <Download className="w-4 h-4 mr-2" />
+                    App installieren
+                  </>
+                )}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* PWA nicht installierbar Fallback */}
+      {!isInstalled && !hasDeferredPrompt && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <AlertTriangle className="w-5 h-5" />
+              <span>App Installation</span>
+            </CardTitle>
+            <CardDescription>
+              Informationen zur Installation der App
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <p className="text-sm text-yellow-800">
+                  <strong>Hinweis:</strong> Die Installation wird von deinem Browser aktuell nicht direkt angeboten.
+                </p>
+              </div>
+              <div className="space-y-2">
+                <h4 className="font-medium">Mögliche Lösungen:</h4>
+                <ul className="text-sm text-muted-foreground space-y-1">
+                  <li>• Seite in Chrome/Edge öffnen und neu laden</li>
+                  <li>• Nicht im Inkognito-Modus surfen</li>
+                  <li>• Browser-Cache leeren und neu versuchen</li>
+                  <li>• Über das Browser-Menü "App installieren" prüfen</li>
+                  <li>• Seite als Lesezeichen und "Zum Startbildschirm hinzufügen"</li>
+                </ul>
+              </div>
+              <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-sm text-blue-800">
+                  <strong>Tipp:</strong> In Chrome/Edge sollte das Install-Symbol in der Adressleiste erscheinen (⬇️).
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {isInstalled && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <Shield className="w-5 h-5" />
+              <span>App installiert</span>
+            </CardTitle>
+            <CardDescription>
+              Habit Tracker Pro ist bereits auf deinem Gerät installiert
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <p className="text-sm text-green-700 bg-green-50 p-3 rounded-lg border border-green-200">
+                ✅ Die App ist erfolgreich installiert und kann offline verwendet werden.
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Du kannst die App über dein Startbildschirm oder App-Menü starten.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Über diese App */}
       <Card>
         <CardHeader>
@@ -705,3 +936,5 @@ Möchtest du wirklich fortfahren?`
     </div>
   )
 }
+
+export default Settings

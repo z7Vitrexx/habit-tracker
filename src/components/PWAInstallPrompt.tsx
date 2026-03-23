@@ -20,11 +20,13 @@ export function PWAInstallPrompt() {
   useEffect(() => {
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault()
+      console.log('PWA Install Prompt Event received:', e)
       setDeferredPrompt(e as BeforeInstallPromptEvent)
       setShowPrompt(true)
     }
 
     const handleAppInstalled = () => {
+      console.log('PWA App Installed event received')
       setIsInstalled(true)
       setShowPrompt(false)
       setDeferredPrompt(null)
@@ -41,9 +43,22 @@ export function PWAInstallPrompt() {
 
   useEffect(() => {
     const checkInstalled = () => {
-      if (window.matchMedia('(display-mode: standalone)').matches) {
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches
+      const isInWebAppiOS = (window.navigator as any).standalone === true
+      const isInWebAppChrome = window.matchMedia('(display-mode: minimal-ui)').matches
+      
+      if (isStandalone || isInWebAppiOS || isInWebAppChrome) {
         setIsInstalled(true)
       }
+      
+      // Debug logging
+      console.log('PWA Install Status:', {
+        isStandalone,
+        isInWebAppiOS,
+        isInWebAppChrome,
+        isInstalled: isStandalone || isInWebAppiOS || isInWebAppChrome,
+        userAgent: navigator.userAgent
+      })
     }
     
     checkInstalled()

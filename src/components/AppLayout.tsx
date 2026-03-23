@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react'
 import { Button } from './ui/button'
-import { Lock, Home, BarChart3, Settings, Calendar, User } from 'lucide-react'
+import { Lock, Home, BarChart3, Settings, Calendar, User, Download } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
+import { usePWAInstall } from '../hooks/usePWAInstall'
 
 interface AppLayoutProps {
   children: ReactNode
@@ -11,6 +12,7 @@ interface AppLayoutProps {
 
 export function AppLayout({ children, currentView, onViewChange }: AppLayoutProps) {
   const { currentProfile, lockProfile } = useAuth()
+  const { isInstallable, install } = usePWAInstall()
 
   const navigation = [
     { id: 'dashboard' as const, label: 'Dashboard', icon: Home },
@@ -65,15 +67,29 @@ export function AppLayout({ children, currentView, onViewChange }: AppLayoutProp
                 </div>
               )}
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={lockProfile}
-              className="text-muted-foreground hover:text-foreground hover:bg-muted px-2 sm:px-3 transition-colors"
-            >
-              <Lock className="w-4 h-4 sm:mr-2" />
-              <span className="hidden sm:inline">Sperren</span>
-            </Button>
+            <div className="flex items-center space-x-2">
+              {isInstallable && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={install}
+                  className="text-muted-foreground hover:text-foreground hover:bg-muted px-2 sm:px-3 transition-colors"
+                  title="App installieren"
+                >
+                  <Download className="w-4 h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Installieren</span>
+                </Button>
+              )}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={lockProfile}
+                className="text-muted-foreground hover:text-foreground hover:bg-muted px-2 sm:px-3 transition-colors"
+              >
+                <Lock className="w-4 h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Sperren</span>
+              </Button>
+            </div>
           </div>
         </div>
       </header>
