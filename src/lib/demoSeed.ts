@@ -329,7 +329,7 @@ export async function seedDemoData(): Promise<void> {
     }
     
     // Use demo password for encryption
-    const demoPassword = 'demo123'
+    const demoPassword = 'demo1234'
     const { encryptedData, salt, iv } = await encryptProfileData(profileData, demoPassword)
     
     // Create demo profile metadata
@@ -351,6 +351,7 @@ export async function seedDemoData(): Promise<void> {
     // Set current profile in localStorage for immediate availability
     localStorage.setItem('habit-tracker-current-profile', demoData.profile.id)
     localStorage.setItem('habit-tracker-demo-password', demoPassword)
+    console.log('Demo profile created with password: demo1234')
     
     console.log('✅ Demo data seeded successfully', {
       profileId: demoData.profile.id,
