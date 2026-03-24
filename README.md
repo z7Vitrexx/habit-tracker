@@ -1,3 +1,6 @@
+
+<img width="1144" height="649" alt="header" src="https://github.com/user-attachments/assets/31886262-d44d-471c-ae76-5396ee4ee6db" />
+
 # Habit Tracker Pro
 
 Eine local-first Habit-Tracking App mit Profilen, Passwortschutz, Statistiken, Verlauf, Erinnerungen und PWA-Unterstützung. Alle Daten bleiben lokal im Browser – kein Backend, kein Cloud-Sync.
