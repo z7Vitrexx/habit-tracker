@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
@@ -24,17 +24,6 @@ export function ProfileSelection() {
   const [showCreatePassword, setShowCreatePassword] = useState(false)
   const [showCreatePasswordConfirm, setShowCreatePasswordConfirm] = useState(false)
   const [localError, setLocalError] = useState<string | null>(null)
-
-  // Auto-select demo profile in demo mode (but don't auto-unlock)
-  useEffect(() => {
-    if (import.meta.env.VITE_DEMO_MODE === 'true' && profiles.length > 0 && !selectedProfile) {
-      const demoProfile = profiles.find(p => p.name === 'Demo')
-      if (demoProfile) {
-        console.log('Demo mode: Auto-selecting demo profile (not unlocking)')
-        setSelectedProfile(demoProfile.id)
-      }
-    }
-  }, [profiles])
 
   const handleCreateProfile = async () => {
     if (!profileName.trim()) {
@@ -414,17 +403,6 @@ export function ProfileSelection() {
                     Deine Daten sind sicher verschlüsselt
                   </p>
                 </div>
-
-                {import.meta.env.VITE_DEMO_MODE === 'true' && selectedProfile && profiles.find(p => p.id === selectedProfile)?.name === 'Demo' && (
-                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-center">
-                    <p className="text-sm text-blue-700">
-                      Demo-Zugang: Passwort <span className="font-mono font-semibold">demo1234</span>
-                    </p>
-                    <p className="text-xs text-blue-500 mt-1">
-                      Änderungen werden nur lokal in deinem Browser gespeichert.
-                    </p>
-                  </div>
-                )}
               </CardContent>
             </Card>
           </div>

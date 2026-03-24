@@ -2,7 +2,6 @@ import { createContext, useContext, type ReactNode, useState, useEffect } from '
 import { db } from '../db'
 import type { ProfileMetadata, ProfileData } from '../types'
 import { encryptProfileData, decryptProfileData } from '../lib/crypto'
-import { seedDemoData } from '../lib/demoSeed'
 
 interface AuthContextType {
   profiles: ProfileMetadata[]
@@ -96,13 +95,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [isUnlocked, profileData?.settings.autoLockMinutes])
 
-  // Load profiles on mount and seed demo data if needed
+  // Load profiles on mount
   useEffect(() => {
-    console.log('AuthProvider mounted - checking demo seed conditions')
-    seedDemoData().then(() => {
-      console.log('Demo seed check completed, now loading profiles')
-      loadProfiles()
-    })
+    loadProfiles()
   }, [])
 
   const loadProfiles = async () => {

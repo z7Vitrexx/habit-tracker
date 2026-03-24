@@ -28,15 +28,6 @@ Habit Tracker Pro ist eine **local-first** Web-App, die es ermöglicht, Gewohnhe
 
 [📋 Detaillierte Release Notes](RELEASE_NOTES_v1.1.md) | [📊 v1.1 Roadmap](docs/v1.1-roadmap.md)
 
-## 🧪 Demo-Zugang
-
-Die öffentliche Testversion enthält ein vorbereitetes Demo-Profil mit Beispieldaten.
-
-- **Profil:** `Demo`
-- **Passwort:** `demo1234`
-
-> **Hinweis:** Die Demo speichert Daten lokal im Browser. Änderungen betreffen nur deine eigene lokale Demo-Kopie. Es gibt kein Backend und keinen gemeinsamen Zustand zwischen Besuchern.
-
 ### ✨ Hauptfunktionen
 
 - **🔐 Mehrere Profile** - Jedes Profil mit eigenem Passwort geschützt

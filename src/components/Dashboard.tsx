@@ -12,7 +12,6 @@ import type { Habit, CheckInStatus } from '../types'
 import { format, startOfWeek, endOfWeek, eachDayOfInterval } from 'date-fns'
 import { de } from 'date-fns/locale'
 import { WelcomeScreen } from './WelcomeScreen'
-import { DemoHint } from './DemoHint'
 
 export function Dashboard() {
   const { profileData } = useAuth()
@@ -277,7 +276,6 @@ export function Dashboard() {
 
   return (
     <div className="space-y-5 sm:space-y-8">
-      <DemoHint />
       {/* Header */}
       <div>
         <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Dashboard</h1>
@@ -447,7 +445,7 @@ export function Dashboard() {
                         </div>
                       </div>
                     </div>
-
+                    
                     {/* Primary Actions */}
                     <div className="flex flex-wrap gap-2 mt-4">
                       <Button
@@ -478,7 +476,7 @@ export function Dashboard() {
                         Übersprungen
                       </Button>
                     </div>
-
+                    
                     {/* Secondary Actions - nur wenn Status gesetzt */}
                     {status !== 'not_scheduled' && (
                       <div className="flex items-center justify-between mt-3 pt-3 border-t border-current/20">
