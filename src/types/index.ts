@@ -65,6 +65,7 @@ export const ProfileMetadataSchema = z.object({
   id: z.string(),
   name: z.string().min(1),
   avatarColor: z.string(),
+  profileImage: z.string().optional(), // Base64 data URL for custom profile image
   encryptedData: z.string(), // Base64 encrypted profile data
   salt: z.string(), // Base64 salt for key derivation
   iv: z.string(), // Base64 initialization vector
@@ -101,6 +102,8 @@ export const ExportDataSchema = z.object({
   exportedAt: z.string(),
   profile: z.object({
     name: z.string().min(1),
+    avatarColor: z.string().optional(),
+    profileImage: z.string().optional(),
     createdAt: z.string(),
   }),
   data: ProfileDataSchema,

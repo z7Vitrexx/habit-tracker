@@ -45,7 +45,11 @@ export function AppLayout({ children, currentView, onViewChange }: AppLayoutProp
               </div>
               {currentProfile && (
                 <div className="flex items-center space-x-2">
-                  <div className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full border-2 border-white shadow-sm`} style={{ backgroundColor: currentProfile.avatarColor }}></div>
+                  {currentProfile.profileImage ? (
+                    <img src={currentProfile.profileImage} alt="" className="w-5 h-5 sm:w-6 sm:h-6 rounded-full object-cover border-2 border-white shadow-sm" />
+                  ) : (
+                    <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full border-2 border-white shadow-sm" style={{ backgroundColor: currentProfile.avatarColor }} />
+                  )}
                   <span className="hidden sm:block text-sm font-medium text-muted-foreground">{currentProfile.name}</span>
                 </div>
               )}

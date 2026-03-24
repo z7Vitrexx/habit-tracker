@@ -302,10 +302,18 @@ export function ProfileSelection() {
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-4">
-                        <div
-                          className="w-12 h-12 rounded-full border-3 border-white shadow-md flex-shrink-0"
-                          style={{ backgroundColor: profile.avatarColor }}
-                        />
+                        {profile.profileImage ? (
+                          <img
+                            src={profile.profileImage}
+                            alt=""
+                            className="w-12 h-12 rounded-full object-cover border-3 border-white shadow-md flex-shrink-0"
+                          />
+                        ) : (
+                          <div
+                            className="w-12 h-12 rounded-full border-3 border-white shadow-md flex-shrink-0"
+                            style={{ backgroundColor: profile.avatarColor }}
+                          />
+                        )}
                         <div className="min-w-0">
                           <h3 className="font-semibold text-lg">{profile.name}</h3>
                           <p className="text-sm text-muted-foreground">

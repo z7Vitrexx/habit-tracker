@@ -14,6 +14,8 @@ interface AuthContextType {
   unlockProfile: (profile: ProfileMetadata, password: string) => Promise<boolean>
   lockProfile: () => void
   deleteProfile: (profileId: string) => Promise<boolean>
+  updateProfileName: (name: string) => Promise<boolean>
+  updateProfileImage: (imageDataUrl: string | null) => Promise<boolean>
   saveProfileData: (data: ProfileData) => Promise<boolean>
   clearError: () => void
 }
@@ -223,12 +225,73 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         lockProfile()
       }
 
+      // Remove profile image from localStorage if exists
+      localStorage.removeItem(`habit-tracker-profile-image-${profileId}`)
+
       await db.profiles.delete(profileId)
       await loadProfiles()
       
       return true
     } catch {
       setError('Fehler beim Löschen des Profils')
+      return false
+    }
+  }
+
+  const updateProfileName = async (name: string): Promise<boolean> => {
+    if (!currentProfile || !currentPassword) {
+      setError('Profil muss entsperrt sein')
+      return false
+    }
+
+    const trimmedName = name.trim()
+    if (!trimmedName || trimmedName.length > 30) {
+      setError('Name muss zwischen 1 und 30 Zeichen lang sein')
+      return false
+    }
+
+    try {
+      setError(null)
+
+      const updatedProfile: ProfileMetadata = {
+        ...currentProfile,
+        name: trimmedName,
+        updatedAt: new Date().toISOString(),
+      }
+
+      await db.profiles.update(currentProfile.id, updatedProfile)
+      setCurrentProfile(updatedProfile)
+      await loadProfiles()
+
+      return true
+    } catch {
+      setError('Fehler beim Ändern des Profilnamens')
+      return false
+    }
+  }
+
+  const updateProfileImage = async (imageDataUrl: string | null): Promise<boolean> => {
+    if (!currentProfile || !currentPassword) {
+      setError('Profil muss entsperrt sein')
+      return false
+    }
+
+    try {
+      setError(null)
+
+      const updatedProfile: ProfileMetadata = {
+        ...currentProfile,
+        profileImage: imageDataUrl || undefined,
+        updatedAt: new Date().toISOString(),
+      }
+
+      await db.profiles.update(currentProfile.id, updatedProfile)
+      setCurrentProfile(updatedProfile)
+      await loadProfiles()
+
+      return true
+    } catch {
+      setError('Fehler beim Aktualisieren des Profilbilds')
       return false
     }
   }
@@ -281,6 +344,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         unlockProfile,
         lockProfile,
         deleteProfile,
+        updateProfileName,
+        updateProfileImage,
         saveProfileData,
         clearError,
       }}

@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog'
-import { Lock, Download, Upload, Trash2, Shield, Cog, AlertTriangle, Bell, Clock } from 'lucide-react'
+import { Lock, Download, Upload, Trash2, Shield, Cog, AlertTriangle, Bell, Clock, UserCog, Camera, X } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { useReminderContext } from '../contexts/ReminderContext'
 import { getIcon } from '../lib/iconMapping'
@@ -14,7 +14,7 @@ import { de } from 'date-fns/locale'
 import { usePWAInstall } from '../hooks/usePWAInstall'
 
 export function Settings() {
-  const { currentProfile, profileData, saveProfileData, lockProfile } = useAuth()
+  const { currentProfile, profileData, saveProfileData, lockProfile, deleteProfile, updateProfileName, updateProfileImage } = useAuth()
   const { permission, isSupported, requestPermission, showNotification } = useReminderContext()
   const { isInstallable, isInstalled, isInstalling, install, hasDeferredPrompt } = usePWAInstall()
 
@@ -33,6 +33,14 @@ export function Settings() {
   const weekStart = profileData?.settings.weekStart || 'monday'
   const theme = profileData?.settings.theme || 'system'
   const notifications = profileData?.settings.notifications ?? true
+
+  // Profile editing state
+  const [editingName, setEditingName] = useState(false)
+  const [newProfileName, setNewProfileName] = useState(currentProfile?.name || '')
+  const [nameError, setNameError] = useState('')
+  const [deleteProfileDialogOpen, setDeleteProfileDialogOpen] = useState(false)
+  const [isDeletingProfile, setIsDeletingProfile] = useState(false)
+  const [imageError, setImageError] = useState('')
 
   // Calculate reminder overview
   const reminderOverview = useMemo(() => {
@@ -98,6 +106,8 @@ export function Settings() {
         exportedAt: new Date().toISOString(),
         profile: {
           name: currentProfile.name,
+          avatarColor: currentProfile.avatarColor,
+          ...(currentProfile.profileImage ? { profileImage: currentProfile.profileImage } : {}),
           createdAt: currentProfile.createdAt,
         },
         data: profileData
@@ -269,6 +279,113 @@ export function Settings() {
     }
   }
 
+  const handleSaveProfileName = async () => {
+    const trimmed = newProfileName.trim()
+    if (!trimmed) {
+      setNameError('Name darf nicht leer sein')
+      return
+    }
+    if (trimmed.length > 30) {
+      setNameError('Name darf maximal 30 Zeichen lang sein')
+      return
+    }
+    setNameError('')
+    const success = await updateProfileName(trimmed)
+    if (success) {
+      setEditingName(false)
+    }
+  }
+
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    setImageError('')
+
+    // Validate file type
+    const validTypes = ['image/jpeg', 'image/png', 'image/webp']
+    if (!validTypes.includes(file.type)) {
+      setImageError('Nur JPG, PNG oder WebP erlaubt')
+      event.target.value = ''
+      return
+    }
+
+    // Validate file size (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      setImageError('Bild darf maximal 2 MB groß sein')
+      event.target.value = ''
+      return
+    }
+
+    try {
+      // Compress and convert to base64 data URL
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => {
+          const img = new Image()
+          img.onload = () => {
+            const canvas = document.createElement('canvas')
+            const maxSize = 256
+            let width = img.width
+            let height = img.height
+
+            if (width > height) {
+              if (width > maxSize) {
+                height = Math.round((height * maxSize) / width)
+                width = maxSize
+              }
+            } else {
+              if (height > maxSize) {
+                width = Math.round((width * maxSize) / height)
+                height = maxSize
+              }
+            }
+
+            canvas.width = width
+            canvas.height = height
+            const ctx = canvas.getContext('2d')
+            if (!ctx) {
+              reject(new Error('Canvas context not available'))
+              return
+            }
+            ctx.drawImage(img, 0, 0, width, height)
+            resolve(canvas.toDataURL('image/webp', 0.8))
+          }
+          img.onerror = () => reject(new Error('Bild konnte nicht geladen werden'))
+          img.src = reader.result as string
+        }
+        reader.onerror = () => reject(new Error('Datei konnte nicht gelesen werden'))
+        reader.readAsDataURL(file)
+      })
+
+      await updateProfileImage(dataUrl)
+    } catch (err) {
+      setImageError(err instanceof Error ? err.message : 'Fehler beim Hochladen')
+    } finally {
+      event.target.value = ''
+    }
+  }
+
+  const handleRemoveImage = async () => {
+    await updateProfileImage(null)
+  }
+
+  const handleDeleteEntireProfile = async () => {
+    if (!currentProfile) return
+
+    try {
+      setIsDeletingProfile(true)
+      const success = await deleteProfile(currentProfile.id)
+      if (success) {
+        setDeleteProfileDialogOpen(false)
+      }
+    } catch (error) {
+      console.error('Delete profile failed:', error)
+    } finally {
+      setIsDeletingProfile(false)
+    }
+  }
+
   const handleSettingsUpdate = async (updates: Partial<ProfileData['settings']>) => {
     if (!profileData) return
     
@@ -315,6 +432,133 @@ export function Settings() {
                 Damit du bei einem Gerätewechsel oder Browser-Reset nichts verlierst, empfehlen wir dir, regelmäßig ein Backup zu erstellen.
               </p>
             </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Profil bearbeiten */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <UserCog className="w-5 h-5" />
+            <span>Profil bearbeiten</span>
+          </CardTitle>
+          <CardDescription>
+            Profilname und Profilbild anpassen
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Profile Image */}
+          <div className="space-y-3">
+            <label className="block text-sm font-medium">Profilbild</label>
+            <div className="flex items-center space-x-4">
+              <div className="relative">
+                {currentProfile.profileImage ? (
+                  <img
+                    src={currentProfile.profileImage}
+                    alt="Profilbild"
+                    className="w-16 h-16 rounded-full object-cover border-2 border-white shadow-md"
+                  />
+                ) : (
+                  <div
+                    className="w-16 h-16 rounded-full border-2 border-white shadow-md"
+                    style={{ backgroundColor: currentProfile.avatarColor }}
+                  />
+                )}
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center space-x-2">
+                  <label className="cursor-pointer">
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      className="hidden"
+                      onChange={handleImageUpload}
+                    />
+                    <span className="inline-flex items-center px-3 py-1.5 text-sm border rounded-lg hover:bg-muted transition-colors">
+                      <Camera className="w-4 h-4 mr-2" />
+                      Bild hochladen
+                    </span>
+                  </label>
+                  {currentProfile.profileImage && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleRemoveImage}
+                      className="text-muted-foreground hover:text-destructive"
+                    >
+                      <X className="w-4 h-4 mr-1" />
+                      Entfernen
+                    </Button>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">JPG, PNG oder WebP, max. 2 MB</p>
+                {imageError && (
+                  <p className="text-xs text-destructive">{imageError}</p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Profile Name */}
+          <div className="space-y-3">
+            <label className="block text-sm font-medium">Profilname</label>
+            {editingName ? (
+              <div className="space-y-2">
+                <Input
+                  value={newProfileName}
+                  onChange={(e) => {
+                    setNewProfileName(e.target.value)
+                    setNameError('')
+                  }}
+                  placeholder="Profilname"
+                  maxLength={30}
+                  className="h-10"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleSaveProfileName()
+                    if (e.key === 'Escape') {
+                      setEditingName(false)
+                      setNewProfileName(currentProfile.name)
+                      setNameError('')
+                    }
+                  }}
+                  autoFocus
+                />
+                {nameError && (
+                  <p className="text-xs text-destructive">{nameError}</p>
+                )}
+                <div className="flex space-x-2">
+                  <Button size="sm" onClick={handleSaveProfileName}>
+                    Speichern
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setEditingName(false)
+                      setNewProfileName(currentProfile.name)
+                      setNameError('')
+                    }}
+                  >
+                    Abbrechen
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between p-3 border rounded-lg">
+                <span className="font-medium">{currentProfile.name}</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setNewProfileName(currentProfile.name)
+                    setEditingName(true)
+                  }}
+                >
+                  Ändern
+                </Button>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -883,7 +1127,7 @@ export function Settings() {
           Verwalte den Zugriff auf dein Profil
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
           <div className="flex items-center justify-between p-4 border rounded-lg">
             <div>
               <h3 className="font-medium">Profil sperren</h3>
@@ -898,6 +1142,23 @@ export function Settings() {
             >
               <Lock className="w-4 h-4" />
               <span>Sperren</span>
+            </Button>
+          </div>
+
+          <div className="flex items-center justify-between p-4 border border-red-200 rounded-lg bg-red-50/50">
+            <div>
+              <h3 className="font-medium text-red-900">Profil komplett löschen</h3>
+              <p className="text-sm text-red-700/80">
+                Löscht das gesamte Profil mit allen Daten unwiderruflich
+              </p>
+            </div>
+            <Button
+              onClick={() => setDeleteProfileDialogOpen(true)}
+              variant="outline"
+              className="flex items-center space-x-2 border-red-300 text-red-700 hover:bg-red-100 hover:text-red-800"
+            >
+              <Trash2 className="w-4 h-4" />
+              <span>Löschen</span>
             </Button>
           </div>
         </CardContent>
@@ -999,6 +1260,55 @@ export function Settings() {
                 className="flex-1"
               >
                 {isDeleting ? 'Wird gelöscht...' : 'Endgültig löschen'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+      {/* Delete Profile Confirmation Dialog */}
+      <Dialog open={deleteProfileDialogOpen} onOpenChange={setDeleteProfileDialogOpen}>
+        <DialogContent className="max-w-md bg-white">
+          <DialogHeader>
+            <DialogTitle className="flex items-center space-x-2 text-red-600">
+              <AlertTriangle className="w-5 h-5" />
+              <span>Profil komplett löschen?</span>
+            </DialogTitle>
+            <DialogDescription>
+              Das gesamte Profil wird unwiderruflich gelöscht.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-sm text-red-800 font-medium mb-2">
+                Profil „{currentProfile.name}" wird vollständig entfernt:
+              </p>
+              <ul className="text-sm text-red-700 space-y-1">
+                <li>• Das Profil selbst (Name, Bild, Zugangsdaten)</li>
+                <li>• Alle Gewohnheiten und Check-ins</li>
+                <li>• Alle Erinnerungen und Einstellungen</li>
+                <li>• Das Profilbild (falls vorhanden)</li>
+              </ul>
+            </div>
+            <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+              <p className="text-sm text-amber-800">
+                <strong>Tipp:</strong> Erstelle zuerst ein Backup, wenn du deine Daten eventuell noch brauchst.
+              </p>
+            </div>
+            <div className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3">
+              <Button
+                onClick={() => setDeleteProfileDialogOpen(false)}
+                variant="outline"
+                className="flex-1"
+              >
+                Abbrechen
+              </Button>
+              <Button
+                onClick={handleDeleteEntireProfile}
+                disabled={isDeletingProfile}
+                variant="destructive"
+                className="flex-1"
+              >
+                {isDeletingProfile ? 'Wird gelöscht...' : 'Profil endgültig löschen'}
               </Button>
             </div>
           </div>
